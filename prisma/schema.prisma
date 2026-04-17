@@ -1,0 +1,266 @@
+// Multi-tenant AI Governance Dashboard schema
+// Local dev uses SQLite; swap `provider` to "postgresql" for production.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Roles are stored as strings in SQLite. We validate them in application code.
+// Allowed values: "SUPER_ADMIN" | "ADMIN" | "VIEWER"
+
+model Organization {
+  id           String   @id @default(cuid())
+  slug         String   @unique
+  name         String
+  logoUrl      String?
+  billingPlan  String   @default("standard")
+  createdAt    DateTime @default(now())
+
+  users        User[]
+  hrModels     HRModel[]
+  biasMetrics  BiasMetric[]
+  regulations  Regulation[]
+  incidents    Incident[]
+  auditLogs    AuditLog[]
+  performance  PerformanceData[]
+  payEquity    PayEquityData[]
+  hiringFunnel HiringFunnelStage[]
+  policies     Policy[]
+  invites      Invite[]
+}
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String?
+  password       String?
+  role           String   @default("VIEWER")
+  image          String?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+
+  accounts       Account[]
+  sessions       Session[]
+
+  @@index([organizationId])
+}
+
+model Invite {
+  id             String    @id @default(cuid())
+  email          String
+  role           String
+  token          String    @unique
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId])
+}
+
+model HRModel {
+  id                  String   @default(cuid())
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  externalId          String                    // e.g. "M-001"
+  name                String
+  function            String
+  riskTier            String
+  vendor              String
+  owner               String
+  status              String
+  lastAudit           DateTime
+  fairnessScore       Float
+  candidatesProcessed Int?
+  description         String
+  updatedAt           DateTime @updatedAt
+
+  biasMetrics         BiasMetric[]
+  incidents           Incident[]
+
+  @@id([organizationId, externalId])
+  @@index([organizationId])
+}
+
+model BiasMetric {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  modelExternalId  String
+  model            HRModel  @relation(fields: [organizationId, modelExternalId], references: [organizationId, externalId], onDelete: Cascade)
+  metric           String
+  group            String
+  value            Float
+  threshold        Float
+  status           String
+  measuredAt       DateTime @default(now())
+
+  @@index([organizationId])
+}
+
+model Regulation {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  shortName      String
+  compliance     Int
+  status         String
+  deadline       DateTime
+  requirements   Int
+  completed      Int
+  category       String
+
+  @@unique([organizationId, shortName])
+  @@index([organizationId])
+}
+
+model Incident {
+  id              String   @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  externalId      String
+  title           String
+  severity        String
+  status          String
+  category        String
+  reportedDate    DateTime
+  resolvedDate    DateTime?
+  assignedTo      String
+  affectedModelExternalId String?
+  affectedModel   HRModel? @relation(fields: [organizationId, affectedModelExternalId], references: [organizationId, externalId])
+  description     String
+
+  @@id([organizationId, externalId])
+  @@index([organizationId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  timestamp      DateTime @default(now())
+  event          String
+  category       String
+  userId         String?
+  severity       String
+  affectedCount  Int      @default(0)
+  details        String
+
+  @@index([organizationId, timestamp])
+}
+
+model PerformanceData {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  department       String
+  avgAIScore       Float
+  avgManagerScore  Float
+  overrideRate     Float
+  employeeCount    Int
+  maleAvg          Float
+  femaleAvg        Float
+  calibrated       Boolean
+
+  @@unique([organizationId, department])
+  @@index([organizationId])
+}
+
+model PayEquityData {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role             String
+  level            String
+  maleMedian       Float
+  femaleMedian     Float
+  gapPercent       Float
+  whiteMedian      Float
+  bipocMedian      Float
+  ethnicGapPercent Float
+  aiRecommended    Float
+  actual           Float
+
+  @@index([organizationId])
+}
+
+model HiringFunnelStage {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  stage          String
+  male           Int
+  female         Int
+  nonBinary      Int
+  white          Int
+  black          Int
+  hispanic       Int
+  asian          Int
+  other          Int
+  orderIndex     Int
+
+  @@unique([organizationId, stage])
+  @@index([organizationId])
+}
+
+model Policy {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  externalId     String
+  name           String
+  category       String
+  version        String
+  status         String
+  lastReviewed   DateTime
+  nextReview     DateTime
+  owner          String
+  approver       String
+
+  @@unique([organizationId, externalId])
+  @@index([organizationId])
+}
+
+// NextAuth required tables
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
