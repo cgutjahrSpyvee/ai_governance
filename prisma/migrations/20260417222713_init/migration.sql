@@ -1,37 +1,41 @@
 -- CreateTable
 CREATE TABLE "Organization" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "slug" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "logoUrl" TEXT,
     "billingPlan" TEXT NOT NULL DEFAULT 'standard',
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Organization_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "User" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "name" TEXT,
     "password" TEXT,
     "role" TEXT NOT NULL DEFAULT 'VIEWER',
     "image" TEXT,
     "organizationId" TEXT,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Invite" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "email" TEXT NOT NULL,
     "role" TEXT NOT NULL,
     "token" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
-    "expiresAt" DATETIME NOT NULL,
-    "acceptedAt" DATETIME,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "Invite_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "acceptedAt" TIMESTAMP(3),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Invite_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -45,44 +49,44 @@ CREATE TABLE "HRModel" (
     "vendor" TEXT NOT NULL,
     "owner" TEXT NOT NULL,
     "status" TEXT NOT NULL,
-    "lastAudit" DATETIME NOT NULL,
-    "fairnessScore" REAL NOT NULL,
+    "lastAudit" TIMESTAMP(3) NOT NULL,
+    "fairnessScore" DOUBLE PRECISION NOT NULL,
     "candidatesProcessed" INTEGER,
     "description" TEXT NOT NULL,
-    "updatedAt" DATETIME NOT NULL,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
 
-    PRIMARY KEY ("organizationId", "externalId"),
-    CONSTRAINT "HRModel_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    CONSTRAINT "HRModel_pkey" PRIMARY KEY ("organizationId","externalId")
 );
 
 -- CreateTable
 CREATE TABLE "BiasMetric" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "modelExternalId" TEXT NOT NULL,
     "metric" TEXT NOT NULL,
     "group" TEXT NOT NULL,
-    "value" REAL NOT NULL,
-    "threshold" REAL NOT NULL,
+    "value" DOUBLE PRECISION NOT NULL,
+    "threshold" DOUBLE PRECISION NOT NULL,
     "status" TEXT NOT NULL,
-    "measuredAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT "BiasMetric_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "BiasMetric_organizationId_modelExternalId_fkey" FOREIGN KEY ("organizationId", "modelExternalId") REFERENCES "HRModel" ("organizationId", "externalId") ON DELETE CASCADE ON UPDATE CASCADE
+    "measuredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "BiasMetric_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Regulation" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "shortName" TEXT NOT NULL,
     "compliance" INTEGER NOT NULL,
     "status" TEXT NOT NULL,
-    "deadline" DATETIME NOT NULL,
+    "deadline" TIMESTAMP(3) NOT NULL,
     "requirements" INTEGER NOT NULL,
     "completed" INTEGER NOT NULL,
     "category" TEXT NOT NULL,
-    CONSTRAINT "Regulation_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Regulation_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -94,66 +98,67 @@ CREATE TABLE "Incident" (
     "severity" TEXT NOT NULL,
     "status" TEXT NOT NULL,
     "category" TEXT NOT NULL,
-    "reportedDate" DATETIME NOT NULL,
-    "resolvedDate" DATETIME,
+    "reportedDate" TIMESTAMP(3) NOT NULL,
+    "resolvedDate" TIMESTAMP(3),
     "assignedTo" TEXT NOT NULL,
     "affectedModelExternalId" TEXT,
     "description" TEXT NOT NULL,
 
-    PRIMARY KEY ("organizationId", "externalId"),
-    CONSTRAINT "Incident_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
-    CONSTRAINT "Incident_organizationId_affectedModelExternalId_fkey" FOREIGN KEY ("organizationId", "affectedModelExternalId") REFERENCES "HRModel" ("organizationId", "externalId") ON DELETE RESTRICT ON UPDATE CASCADE
+    CONSTRAINT "Incident_pkey" PRIMARY KEY ("organizationId","externalId")
 );
 
 -- CreateTable
 CREATE TABLE "AuditLog" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
-    "timestamp" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "timestamp" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "event" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "userId" TEXT,
     "severity" TEXT NOT NULL,
     "affectedCount" INTEGER NOT NULL DEFAULT 0,
     "details" TEXT NOT NULL,
-    CONSTRAINT "AuditLog_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "PerformanceData" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "department" TEXT NOT NULL,
-    "avgAIScore" REAL NOT NULL,
-    "avgManagerScore" REAL NOT NULL,
-    "overrideRate" REAL NOT NULL,
+    "avgAIScore" DOUBLE PRECISION NOT NULL,
+    "avgManagerScore" DOUBLE PRECISION NOT NULL,
+    "overrideRate" DOUBLE PRECISION NOT NULL,
     "employeeCount" INTEGER NOT NULL,
-    "maleAvg" REAL NOT NULL,
-    "femaleAvg" REAL NOT NULL,
+    "maleAvg" DOUBLE PRECISION NOT NULL,
+    "femaleAvg" DOUBLE PRECISION NOT NULL,
     "calibrated" BOOLEAN NOT NULL,
-    CONSTRAINT "PerformanceData_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "PerformanceData_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "PayEquityData" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "role" TEXT NOT NULL,
     "level" TEXT NOT NULL,
-    "maleMedian" REAL NOT NULL,
-    "femaleMedian" REAL NOT NULL,
-    "gapPercent" REAL NOT NULL,
-    "whiteMedian" REAL NOT NULL,
-    "bipocMedian" REAL NOT NULL,
-    "ethnicGapPercent" REAL NOT NULL,
-    "aiRecommended" REAL NOT NULL,
-    "actual" REAL NOT NULL,
-    CONSTRAINT "PayEquityData_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "maleMedian" DOUBLE PRECISION NOT NULL,
+    "femaleMedian" DOUBLE PRECISION NOT NULL,
+    "gapPercent" DOUBLE PRECISION NOT NULL,
+    "whiteMedian" DOUBLE PRECISION NOT NULL,
+    "bipocMedian" DOUBLE PRECISION NOT NULL,
+    "ethnicGapPercent" DOUBLE PRECISION NOT NULL,
+    "aiRecommended" DOUBLE PRECISION NOT NULL,
+    "actual" DOUBLE PRECISION NOT NULL,
+
+    CONSTRAINT "PayEquityData_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "HiringFunnelStage" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "stage" TEXT NOT NULL,
     "male" INTEGER NOT NULL,
@@ -165,28 +170,30 @@ CREATE TABLE "HiringFunnelStage" (
     "asian" INTEGER NOT NULL,
     "other" INTEGER NOT NULL,
     "orderIndex" INTEGER NOT NULL,
-    CONSTRAINT "HiringFunnelStage_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "HiringFunnelStage_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Policy" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "organizationId" TEXT NOT NULL,
     "externalId" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "category" TEXT NOT NULL,
     "version" TEXT NOT NULL,
     "status" TEXT NOT NULL,
-    "lastReviewed" DATETIME NOT NULL,
-    "nextReview" DATETIME NOT NULL,
+    "lastReviewed" TIMESTAMP(3) NOT NULL,
+    "nextReview" TIMESTAMP(3) NOT NULL,
     "owner" TEXT NOT NULL,
     "approver" TEXT NOT NULL,
-    CONSTRAINT "Policy_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Policy_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Account" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
     "type" TEXT NOT NULL,
     "provider" TEXT NOT NULL,
@@ -198,23 +205,25 @@ CREATE TABLE "Account" (
     "scope" TEXT,
     "id_token" TEXT,
     "session_state" TEXT,
-    CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+
+    CONSTRAINT "Account_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "Session" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "sessionToken" TEXT NOT NULL,
     "userId" TEXT NOT NULL,
-    "expires" DATETIME NOT NULL,
-    CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE CASCADE ON UPDATE CASCADE
+    "expires" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Session_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
 CREATE TABLE "VerificationToken" (
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
-    "expires" DATETIME NOT NULL
+    "expires" TIMESTAMP(3) NOT NULL
 );
 
 -- CreateIndex
@@ -282,3 +291,48 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
+
+-- AddForeignKey
+ALTER TABLE "User" ADD CONSTRAINT "User_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Invite" ADD CONSTRAINT "Invite_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "HRModel" ADD CONSTRAINT "HRModel_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BiasMetric" ADD CONSTRAINT "BiasMetric_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "BiasMetric" ADD CONSTRAINT "BiasMetric_organizationId_modelExternalId_fkey" FOREIGN KEY ("organizationId", "modelExternalId") REFERENCES "HRModel"("organizationId", "externalId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Regulation" ADD CONSTRAINT "Regulation_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Incident" ADD CONSTRAINT "Incident_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Incident" ADD CONSTRAINT "Incident_organizationId_affectedModelExternalId_fkey" FOREIGN KEY ("organizationId", "affectedModelExternalId") REFERENCES "HRModel"("organizationId", "externalId") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PerformanceData" ADD CONSTRAINT "PerformanceData_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "PayEquityData" ADD CONSTRAINT "PayEquityData_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "HiringFunnelStage" ADD CONSTRAINT "HiringFunnelStage_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Policy" ADD CONSTRAINT "Policy_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
