@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { SessionUser } from "@/lib/rbac";
+import { HumaniCoreMark, HumaniCoreWordmark } from "@/components/layout/humanicore-logo";
 
 const mainNav = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -54,25 +55,26 @@ export default function Sidebar({ session }: { session: SessionUser | null }) {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 h-screen bg-sidebar-bg text-sidebar-foreground transition-all duration-300 flex flex-col",
+        "fixed left-0 top-0 z-40 h-screen bg-white border-r border-slate-200 transition-all duration-300 flex flex-col",
         collapsed ? "w-16" : "w-60",
       )}
     >
-      <div className="flex items-center gap-3 px-4 py-5 border-b border-white/10">
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary text-white font-bold text-sm shrink-0">
-          AI
-        </div>
-        {!collapsed && (
-          <div className="overflow-hidden">
-            <h1 className="text-sm font-semibold text-white whitespace-nowrap">AI Governance</h1>
-            <p className="text-[10px] text-slate-400 whitespace-nowrap">
-              {session?.organizationName || "HR Dashboard"}
-            </p>
-          </div>
+      {/* Logo */}
+      <div className={cn(
+        "flex items-center border-b border-slate-100 shrink-0",
+        collapsed ? "justify-center px-2 py-[18px]" : "px-4 py-[18px]"
+      )}>
+        {collapsed ? (
+          <HumaniCoreMark className="w-8 h-8" />
+        ) : (
+          <HumaniCoreWordmark
+            subtitle={session?.organizationName || "Human Centered Governance"}
+          />
         )}
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
         {hasOrgContext && (
           <Section label="Governance" collapsed={collapsed}>
             {mainNav.map((item) => (
@@ -98,9 +100,10 @@ export default function Sidebar({ session }: { session: SessionUser | null }) {
         )}
       </nav>
 
+      {/* Collapse toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center justify-center py-3 border-t border-white/10 text-slate-400 hover:text-white transition-colors"
+        className="flex items-center justify-center py-3 border-t border-slate-100 text-slate-300 hover:text-primary transition-colors shrink-0"
       >
         {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
       </button>
@@ -118,13 +121,13 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mb-3">
+    <div>
       {!collapsed && (
-        <div className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+        <p className="px-2 mb-1 text-[11px] font-semibold uppercase tracking-widest text-slate-400">
           {label}
-        </div>
+        </p>
       )}
-      <div className="space-y-1">{children}</div>
+      <div className="space-y-0.5">{children}</div>
     </div>
   );
 }
@@ -141,18 +144,21 @@ function NavLink({
   const Icon = item.icon;
   const isActive =
     pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+
   return (
     <Link
       href={item.href}
+      title={collapsed ? item.label : undefined}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+        "flex items-center gap-2.5 px-2 py-2 rounded-md text-[13px] transition-colors",
         isActive
-          ? "bg-primary text-white"
-          : "text-slate-400 hover:text-white hover:bg-white/5",
+          ? "bg-primary text-white/90 font-normal"
+          : "text-slate-600 font-normal hover:bg-slate-50 hover:text-primary",
+        collapsed && "justify-center",
       )}
     >
-      <Icon className="w-5 h-5 shrink-0" />
-      {!collapsed && <span className="whitespace-nowrap">{item.label}</span>}
+      <Icon className={cn("shrink-0", isActive ? "w-[17px] h-[17px]" : "w-[17px] h-[17px] text-slate-400 group-hover:text-primary")} />
+      {!collapsed && <span>{item.label}</span>}
     </Link>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield } from "lucide-react";
+import { HumaniCoreLoginMark } from "@/components/layout/humanicore-logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -34,19 +34,13 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-md bg-white rounded-2xl border border-border p-8 shadow-sm">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-lg bg-primary text-white flex items-center justify-center">
-          <Shield className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-lg font-bold">AI Governance</h1>
-          <p className="text-xs text-muted-foreground">HR Dashboard</p>
-        </div>
+      <div className="mb-7">
+        <HumaniCoreLoginMark />
       </div>
 
       <h2 className="text-xl font-semibold mb-1">Sign in to your account</h2>
       <p className="text-sm text-muted-foreground mb-6">
-        Access your organization&apos;s AI governance dashboard
+        Access your organization&apos;s governance dashboard
       </p>
 
       <form onSubmit={onSubmit} className="space-y-4">

@@ -19,10 +19,12 @@
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-active: var(--sidebar-active);
   --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-playfair);
   --font-mono: var(--font-geist-mono);
 }
 
 :root {
+  /* HumaniCore AI brand palette */
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -30,16 +32,16 @@
   --border: #e2e8f0;
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
-  --primary: #2563eb;
+  --accent: #eef2f8;
+  --accent-foreground: #1b4a8a;
+  --primary: #1b4a8a;        /* HumaniCore navy */
   --primary-foreground: #ffffff;
-  --destructive: #ef4444;
+  --destructive: #c0392b;    /* HumaniCore red (heart accent) */
   --success: #10b981;
   --warning: #f59e0b;
-  --sidebar-bg: #0f172a;
-  --sidebar-foreground: #cbd5e1;
-  --sidebar-active: #2563eb;
+  --sidebar-bg: #ffffff;     /* White sidebar */
+  --sidebar-foreground: #334155;
+  --sidebar-active: #1b4a8a;
 }
 
 body {
