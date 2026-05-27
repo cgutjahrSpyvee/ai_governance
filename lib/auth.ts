@@ -30,6 +30,7 @@ declare module "next-auth/jwt" {
 const googleConfigured = !!process.env.GOOGLE_CLIENT_ID && !!process.env.GOOGLE_CLIENT_SECRET;
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  trustHost: true,
   session: { strategy: "jwt" },
   secret: process.env.AUTH_SECRET,
   pages: { signIn: "/login" },
