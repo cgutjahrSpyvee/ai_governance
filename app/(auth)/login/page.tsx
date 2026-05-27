@@ -89,7 +89,7 @@ export default function LoginPage() {
           <DemoAccount label="Globex Admin" email="admin@globex.com" />
         </div>
         <p className="text-[10px] text-muted-foreground text-center mt-3">
-          Password for all demo accounts: <code className="bg-muted px-1 rounded">password123</code>
+          Contact your administrator for access credentials.
         </p>
       </div>
     </div>

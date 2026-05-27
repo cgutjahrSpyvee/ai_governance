@@ -1,12 +1,13 @@
 import { cn } from "@/lib/utils";
+import { HUMANICORE_MARK, HUMANICORE_WORDMARK } from "@/lib/logo-assets";
 
-/** Circle mark — "Ai" with red heart */
+/** Circle mark — "Ai" with red heart, embedded as data URI */
 export function HumaniCoreMark({ className, size = 36 }: { className?: string; size?: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src="/humanicore-mark.png"
-      alt="HumaniCore AI mark"
+      src={HUMANICORE_MARK}
+      alt="HumaniCore AI"
       width={size}
       height={size}
       className={cn("shrink-0 object-contain", className)}
@@ -40,14 +41,14 @@ export function HumaniCoreWordmark({ subtitle }: { subtitle?: string }) {
 export function HumaniCoreLoginMark() {
   return (
     <div className="flex items-center gap-3">
-      <HumaniCoreMark size={56} />
+      <HumaniCoreMark size={52} />
       <div>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="/humanicore-wordmark.png"
+          src={HUMANICORE_WORDMARK}
           alt="HumaniCore"
-          height={36}
-          style={{ height: 36, width: "auto" }}
+          height={34}
+          style={{ height: 34, width: "auto" }}
           className="object-contain object-left"
         />
         <p className="text-xs text-slate-500 mt-1">
