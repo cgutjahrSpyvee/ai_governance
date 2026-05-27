@@ -30,6 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       data: body,
     });
     const db = tenantPrisma(session.organizationId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `User updated: ${updated.email}`,
@@ -37,7 +38,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         userId: session.userId,
         severity: "Info",
         details: `Changes: ${JSON.stringify(body)}, by ${session.email}`,
-      },
+      } as any,
     });
     return Response.json({ id: updated.id, email: updated.email, name: updated.name, role: updated.role });
   } catch (e) {
@@ -62,6 +63,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     }
     await prisma.user.delete({ where: { id } });
     const db = tenantPrisma(session.organizationId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `User removed: ${target.email}`,
@@ -69,7 +71,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         userId: session.userId,
         severity: "Warning",
         details: `Removed by ${session.email}`,
-      },
+      } as any,
     });
     return Response.json({ ok: true });
   } catch (e) {

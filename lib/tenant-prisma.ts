@@ -58,14 +58,17 @@ export function tenantPrisma(organizationId: string) {
         },
         async create({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
-            args.data = { ...args.data, organizationId };
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (args as any).data = { ...(args as any).data, organizationId };
           }
           return query(args);
         },
         async createMany({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
-            const data = Array.isArray(args.data) ? args.data : [args.data];
-            args.data = data.map((d) => ({ ...d, organizationId }));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const data: any[] = Array.isArray(args.data) ? args.data : [args.data];
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (args as any).data = data.map((d) => ({ ...d, organizationId }));
           }
           return query(args);
         },
@@ -84,7 +87,8 @@ export function tenantPrisma(organizationId: string) {
         async upsert({ model, args, query }) {
           if (TENANT_MODELS.has(model)) {
             args.where = { ...args.where, organizationId };
-            args.create = { ...args.create, organizationId };
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (args as any).create = { ...(args as any).create, organizationId };
           }
           return query(args);
         },

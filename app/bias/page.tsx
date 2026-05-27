@@ -92,7 +92,7 @@ export default function BiasPage() {
             </thead>
             <tbody>
               {biasMetrics.map((b) => (
-                <tr key={b.id} className="border-b border-border/50 hover:bg-muted/20">
+                <tr key={`${b.model}-${b.metric}-${b.group}`} className="border-b border-border/50 hover:bg-muted/20">
                   <td className="py-2.5 font-medium">{b.model}</td>
                   <td className="py-2.5 text-muted-foreground">{b.metric}</td>
                   <td className="py-2.5 text-muted-foreground">{b.group}</td>

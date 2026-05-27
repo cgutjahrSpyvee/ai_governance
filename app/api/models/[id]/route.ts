@@ -41,6 +41,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       where: { organizationId_externalId: { organizationId: session.organizationId, externalId: id } },
       data: body,
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `Model updated: ${model.name}`,
@@ -48,7 +49,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         userId: session.userId,
         severity: "Info",
         details: `Updated by ${session.email}`,
-      },
+      } as any,
     });
     return Response.json(model);
   } catch (e) {
@@ -65,6 +66,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     const model = await db.hRModel.delete({
       where: { organizationId_externalId: { organizationId: session.organizationId, externalId: id } },
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `Model deleted: ${model.name}`,
@@ -72,7 +74,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
         userId: session.userId,
         severity: "Warning",
         details: `Deleted by ${session.email}`,
-      },
+      } as any,
     });
     return Response.json({ ok: true });
   } catch (e) {

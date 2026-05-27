@@ -63,6 +63,7 @@ export async function POST(req: Request) {
     console.log(`   ${inviteUrl}\n`);
 
     const db = tenantPrisma(session.organizationId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `User invited: ${body.email}`,
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
         userId: session.userId,
         severity: "Info",
         details: `Role: ${body.role}, invited by ${session.email}`,
-      },
+      } as any,
     });
 
     return Response.json({ invite, inviteUrl }, { status: 201 });

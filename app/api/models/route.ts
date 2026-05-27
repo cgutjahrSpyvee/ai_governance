@@ -36,12 +36,14 @@ export async function POST(req: Request) {
     requireAdmin(session);
     const body = createSchema.parse(await req.json());
     const db = tenantPrisma(session.organizationId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const model = await db.hRModel.create({
       data: {
         ...body,
         lastAudit: new Date(body.lastAudit),
-      },
+      } as any,
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `Model created: ${model.name}`,
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
         userId: session.userId,
         severity: "Info",
         details: `Created by ${session.email}`,
-      },
+      } as any,
     });
     return Response.json(model, { status: 201 });
   } catch (e) {

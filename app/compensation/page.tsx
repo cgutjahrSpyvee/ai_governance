@@ -91,7 +91,7 @@ export default function CompensationPage() {
             </thead>
             <tbody>
               {payEquity.map((d) => (
-                <tr key={d.id} className="border-b border-border/50 hover:bg-muted/20">
+                <tr key={`${d.role}-${d.level}`} className="border-b border-border/50 hover:bg-muted/20">
                   <td className="py-2.5 font-medium">{d.role}</td>
                   <td className="py-2.5 text-muted-foreground">{d.level}</td>
                   <td className="py-2.5">${formatNumber(d.maleMedian)}</td>

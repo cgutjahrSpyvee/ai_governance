@@ -32,12 +32,14 @@ export async function POST(req: Request) {
     requireAdmin(session);
     const body = createSchema.parse(await req.json());
     const db = tenantPrisma(session.organizationId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const incident = await db.incident.create({
       data: {
         ...body,
         reportedDate: new Date(body.reportedDate),
-      },
+      } as any,
     });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await db.auditLog.create({
       data: {
         event: `Incident reported: ${incident.title}`,
@@ -45,7 +47,7 @@ export async function POST(req: Request) {
         userId: session.userId,
         severity: body.severity === "Critical" ? "Critical" : "Warning",
         details: `Reported by ${session.email}`,
-      },
+      } as any,
     });
     return Response.json(incident, { status: 201 });
   } catch (e) {
