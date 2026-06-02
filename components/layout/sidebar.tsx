@@ -29,6 +29,7 @@ const mainNav = [
   { href: "/models", label: "AI Models", icon: Bot },
   { href: "/hiring", label: "Hiring AI", icon: UserSearch },
   { href: "/screening", label: "Resume Screening", icon: Heart },
+  { href: "/screening/review", label: "Review Queue", icon: ShieldCheck },
   { href: "/bias", label: "Bias & Fairness", icon: Scale },
   { href: "/compliance", label: "Compliance", icon: ShieldCheck },
   { href: "/performance", label: "Performance", icon: BarChart3 },

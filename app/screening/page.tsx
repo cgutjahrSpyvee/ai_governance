@@ -14,7 +14,11 @@ import {
   X,
   Heart,
   ShieldCheck,
+  FileText,
+  XCircle,
 } from "lucide-react";
+import Link from "next/link";
+import type { CertificationMetrics } from "@/lib/certification-engine";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -221,10 +225,53 @@ function UploadPanel({ requisitionId, onDone }: { requisitionId: string; onDone:
   );
 }
 
+// ── Mini certification scorecard ─────────────────────────────────────────────
+
+function CertScorecard({ reqId, screened }: { reqId: string; screened: number }) {
+  const { data: cert } = useSWR<CertificationMetrics>(
+    screened > 0 ? `/api/screening/requisitions/${reqId}/certification` : null,
+    fetcher
+  );
+
+  if (screened === 0 || !cert) return null;
+
+  return (
+    <div className={`rounded-lg border p-3 ${cert.passed ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          {cert.passed
+            ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+            : <XCircle className="w-3.5 h-3.5 text-red-500" />}
+          <span className={`text-xs font-semibold ${cert.passed ? "text-green-700" : "text-red-700"}`}>
+            {cert.passed ? "Certified" : "Not Certified"} · {cert.score}% compliant
+          </span>
+        </div>
+        <Link
+          href={`/screening/${reqId}/report`}
+          className="flex items-center gap-1 text-[10px] text-primary hover:underline"
+        >
+          <FileText className="w-3 h-3" /> Full Report
+        </Link>
+      </div>
+      <div className="grid grid-cols-5 gap-1">
+        {cert.metrics.map((m, i) => (
+          <div key={i} className="flex flex-col items-center gap-0.5" title={m.label}>
+            {m.passed
+              ? <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              : <XCircle className="w-3.5 h-3.5 text-red-400" />}
+            <span className="text-[9px] text-center text-muted-foreground leading-tight">{m.label.split(" ")[0]}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Requisition Card ──────────────────────────────────────────────────────────
 
 function RequisitionCard({ req }: { req: Requisition }) {
   const [expanded, setExpanded] = useState(false);
+  const screened = req._count?.screeningResults ?? 0;
 
   return (
     <div className="bg-card rounded-xl border border-border p-5">
@@ -234,10 +281,17 @@ function RequisitionCard({ req }: { req: Requisition }) {
             <h3 className="text-sm font-semibold">{req.title}</h3>
             <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${req.status === "Active" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>{req.status}</span>
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">{req.department} · {req._count?.screeningResults ?? 0} screened</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{req.department} · {screened} screened</p>
         </div>
         {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground shrink-0" /> : <ChevronDown className="w-4 h-4 text-muted-foreground shrink-0" />}
       </div>
+
+      {/* Inline scorecard always visible when there's data */}
+      {screened > 0 && (
+        <div className="mt-3">
+          <CertScorecard reqId={req.id} screened={screened} />
+        </div>
+      )}
 
       {expanded && (
         <div className="mt-4 space-y-4 border-t border-border pt-4">

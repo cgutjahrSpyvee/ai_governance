@@ -30,10 +30,11 @@ model Organization {
   performance  PerformanceData[]
   payEquity    PayEquityData[]
   hiringFunnel HiringFunnelStage[]
-  policies         Policy[]
-  invites          Invite[]
-  jobRequisitions  JobRequisition[]
-  screeningResults ScreeningResult[]
+  policies                Policy[]
+  invites                 Invite[]
+  jobRequisitions         JobRequisition[]
+  screeningResults        ScreeningResult[]
+  certificationSnapshots  CertificationSnapshot[]
 }
 
 model User {
@@ -245,9 +246,37 @@ model JobRequisition {
   createdAt      DateTime @default(now())
   createdBy      String?
 
-  screeningResults ScreeningResult[]
+  screeningResults       ScreeningResult[]
+  certificationSnapshots CertificationSnapshot[]
 
   @@index([organizationId])
+}
+
+model CertificationSnapshot {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requisitionId         String
+  requisition           JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  // Aggregate metrics at time of certification
+  totalScreened         Int
+  biasAlertRate         Float   // % with bias flags
+  reviewRequiredRate    Float   // % requiring human review
+  reviewCompletionRate  Float   // % of flagged that were reviewed
+  adverseImpactRatio    Float   // four-fifths proxy metric
+  scoreVariance         Float   // stddev of overall scores
+  recommendationDist    String  // JSON: { "Strong Yes": N, "Yes": N, ... }
+
+  // Pass/fail per metric
+  passed                Boolean
+  metricResults         String  // JSON: { metricName: { passed, value, threshold } }
+
+  generatedAt           DateTime @default(now())
+  generatedBy           String?
+
+  @@index([organizationId])
+  @@index([requisitionId])
 }
 
 model ScreeningResult {

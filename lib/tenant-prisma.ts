@@ -15,6 +15,7 @@ const TENANT_MODELS = new Set([
   "Policy",
   "JobRequisition",
   "ScreeningResult",
+  "CertificationSnapshot",
 ]);
 
 /**

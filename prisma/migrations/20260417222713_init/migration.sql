@@ -389,3 +389,29 @@ CREATE INDEX "ScreeningResult_requisitionId_idx" ON "ScreeningResult"("requisiti
 ALTER TABLE "JobRequisition" ADD CONSTRAINT "JobRequisition_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ScreeningResult" ADD CONSTRAINT "ScreeningResult_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "ScreeningResult" ADD CONSTRAINT "ScreeningResult_requisitionId_fkey" FOREIGN KEY ("requisitionId") REFERENCES "JobRequisition"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable (CertificationSnapshot - Phase 2)
+CREATE TABLE "CertificationSnapshot" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "requisitionId" TEXT NOT NULL,
+    "totalScreened" INTEGER NOT NULL,
+    "biasAlertRate" DOUBLE PRECISION NOT NULL,
+    "reviewRequiredRate" DOUBLE PRECISION NOT NULL,
+    "reviewCompletionRate" DOUBLE PRECISION NOT NULL,
+    "adverseImpactRatio" DOUBLE PRECISION NOT NULL,
+    "scoreVariance" DOUBLE PRECISION NOT NULL,
+    "recommendationDist" TEXT NOT NULL,
+    "passed" BOOLEAN NOT NULL,
+    "metricResults" TEXT NOT NULL,
+    "generatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "generatedBy" TEXT,
+
+    CONSTRAINT "CertificationSnapshot_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "CertificationSnapshot_organizationId_idx" ON "CertificationSnapshot"("organizationId");
+CREATE INDEX "CertificationSnapshot_requisitionId_idx" ON "CertificationSnapshot"("requisitionId");
+
+ALTER TABLE "CertificationSnapshot" ADD CONSTRAINT "CertificationSnapshot_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "CertificationSnapshot" ADD CONSTRAINT "CertificationSnapshot_requisitionId_fkey" FOREIGN KEY ("requisitionId") REFERENCES "JobRequisition"("id") ON DELETE CASCADE ON UPDATE CASCADE;
