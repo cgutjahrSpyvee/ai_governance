@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     // Extract text from the uploaded file
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    const resumeText = await extractText(buffer, file.type);
+    const resumeText = await extractText(buffer, file.type, file.name);
 
     if (!resumeText || resumeText.length < 50) {
       throw new HttpError(422, "Could not extract readable text from the file");
@@ -70,6 +70,8 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (e) {
+    // Log full error to Render logs for debugging
+    console.error("[screening/upload] error:", e);
     return handleHttpError(e);
   }
 }

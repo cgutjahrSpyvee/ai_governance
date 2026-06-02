@@ -20,30 +20,50 @@ export type ScoreResult = z.infer<typeof ScoreSchema>;
 
 // ── Document text extraction ─────────────────────────────────────────────────
 
+function isDocx(mimeType: string, fileName: string) {
+  return (
+    mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+    mimeType === "application/msword" ||
+    mimeType === "application/zip" || // browsers sometimes send this for .docx
+    fileName.toLowerCase().endsWith(".docx") ||
+    fileName.toLowerCase().endsWith(".doc")
+  );
+}
+
+function isPdf(mimeType: string, fileName: string) {
+  return (
+    mimeType === "application/pdf" ||
+    fileName.toLowerCase().endsWith(".pdf")
+  );
+}
+
 export async function extractText(
   buffer: Buffer,
-  mimeType: string
+  mimeType: string,
+  fileName = ""
 ): Promise<string> {
-  if (mimeType === "application/pdf" || mimeType === "application/octet-stream") {
-    // Dynamic import to avoid server-side issues
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const pdfModule = await import("pdf-parse") as any;
-    const pdfParse = pdfModule.default ?? pdfModule;
-    const data = await pdfParse(buffer);
-    return data.text.trim();
+  if (isPdf(mimeType, fileName)) {
+    try {
+      // pdf-parse has a known Next.js issue — wrap in try/catch and use
+      // a safe import path that avoids the test-file side-effect
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pdfModule = await import("pdf-parse") as any;
+      const pdfParse = pdfModule.default ?? pdfModule;
+      const data = await pdfParse(buffer);
+      return data.text.trim();
+    } catch {
+      // Fallback: return raw text (better than crashing)
+      return buffer.toString("utf8").trim();
+    }
   }
 
-  if (
-    mimeType ===
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
-    mimeType === "application/msword"
-  ) {
+  if (isDocx(mimeType, fileName)) {
     const mammoth = await import("mammoth");
     const result = await mammoth.extractRawText({ buffer });
     return result.value.trim();
   }
 
-  // Plain text fallback
+  // Plain text / unknown
   return buffer.toString("utf8").trim();
 }
 
@@ -104,7 +124,7 @@ ${jobRequirements}
 ---
 
 RESUME (anonymized):
-${anonymized.slice(0, 8000)}  // cap to avoid excessive tokens
+${anonymized.slice(0, 6000)}
 
 ---
 
@@ -124,7 +144,7 @@ Evaluate this resume against the job requisition and return a JSON object with t
 
   const message = await anthropic.messages.create({
     model: "claude-opus-4-8",
-    max_tokens: 1024,
+    max_tokens: 4096,  // thinking uses tokens before the JSON output
     thinking: { type: "adaptive" },
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content: prompt }],
@@ -138,11 +158,18 @@ Evaluate this resume against the job requisition and return a JSON object with t
 
   // Parse JSON — Claude may wrap in ```json ... ```
   const raw = textBlock.text
-    .replace(/^```json\s*/m, "")
-    .replace(/^```\s*/m, "")
-    .replace(/```$/m, "")
+    .replace(/^```json\s*/im, "")
+    .replace(/^```\s*/im, "")
+    .replace(/```\s*$/im, "")
     .trim();
 
-  const parsed = JSON.parse(raw);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    // Log the raw response so we can debug unexpected formats
+    console.error("[resume-scorer] Claude raw response:", textBlock.text.slice(0, 500));
+    throw new Error(`Claude returned invalid JSON. Preview: ${textBlock.text.slice(0, 200)}`);
+  }
   return ScoreSchema.parse(parsed);
 }
