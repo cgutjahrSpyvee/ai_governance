@@ -13,6 +13,8 @@ const TENANT_MODELS = new Set([
   "PayEquityData",
   "HiringFunnelStage",
   "Policy",
+  "JobRequisition",
+  "ScreeningResult",
 ]);
 
 /**

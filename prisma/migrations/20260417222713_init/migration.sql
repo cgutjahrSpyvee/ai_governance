@@ -336,3 +336,56 @@ ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId"
 
 -- AddForeignKey
 ALTER TABLE "Session" ADD CONSTRAINT "Session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable (JobRequisition)
+CREATE TABLE "JobRequisition" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "department" TEXT NOT NULL,
+    "description" TEXT NOT NULL,
+    "requirements" TEXT NOT NULL,
+    "status" TEXT NOT NULL DEFAULT 'Active',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdBy" TEXT,
+
+    CONSTRAINT "JobRequisition_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable (ScreeningResult)
+CREATE TABLE "ScreeningResult" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "requisitionId" TEXT NOT NULL,
+    "candidateName" TEXT,
+    "candidateEmail" TEXT,
+    "fileName" TEXT NOT NULL,
+    "resumeText" TEXT NOT NULL,
+    "overallScore" DOUBLE PRECISION NOT NULL,
+    "technicalFit" DOUBLE PRECISION NOT NULL,
+    "experienceFit" DOUBLE PRECISION NOT NULL,
+    "educationFit" DOUBLE PRECISION NOT NULL,
+    "recommendation" TEXT NOT NULL,
+    "summary" TEXT NOT NULL,
+    "strengths" TEXT NOT NULL,
+    "gaps" TEXT NOT NULL,
+    "biasFlags" TEXT,
+    "reviewRequired" BOOLEAN NOT NULL DEFAULT false,
+    "humanDecision" TEXT,
+    "humanReviewedBy" TEXT,
+    "humanReviewedAt" TIMESTAMP(3),
+    "status" TEXT NOT NULL DEFAULT 'Pending',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ScreeningResult_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX "JobRequisition_organizationId_idx" ON "JobRequisition"("organizationId");
+CREATE INDEX "ScreeningResult_organizationId_idx" ON "ScreeningResult"("organizationId");
+CREATE INDEX "ScreeningResult_requisitionId_idx" ON "ScreeningResult"("requisitionId");
+
+-- AddForeignKey
+ALTER TABLE "JobRequisition" ADD CONSTRAINT "JobRequisition_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ScreeningResult" ADD CONSTRAINT "ScreeningResult_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ScreeningResult" ADD CONSTRAINT "ScreeningResult_requisitionId_fkey" FOREIGN KEY ("requisitionId") REFERENCES "JobRequisition"("id") ON DELETE CASCADE ON UPDATE CASCADE;

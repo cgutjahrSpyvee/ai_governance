@@ -18,6 +18,7 @@ import {
   Users,
   Crown,
   Building2,
+  Heart,
 } from "lucide-react";
 import { useState } from "react";
 import type { SessionUser } from "@/lib/rbac";
@@ -27,6 +28,7 @@ const mainNav = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/models", label: "AI Models", icon: Bot },
   { href: "/hiring", label: "Hiring AI", icon: UserSearch },
+  { href: "/screening", label: "Resume Screening", icon: Heart },
   { href: "/bias", label: "Bias & Fairness", icon: Scale },
   { href: "/compliance", label: "Compliance", icon: ShieldCheck },
   { href: "/performance", label: "Performance", icon: BarChart3 },
