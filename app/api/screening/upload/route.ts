@@ -3,6 +3,7 @@ import { tenantPrisma } from "@/lib/tenant-prisma";
 import { handleHttpError, requireAdmin, HttpError } from "@/lib/rbac";
 import { extractText, scoreResume } from "@/lib/resume-scorer";
 import { syncHiringFunnel } from "@/lib/screening-integration";
+import { auditResumeScored } from "@/lib/screening-audit";
 
 export const maxDuration = 60; // allow up to 60s for Claude scoring
 
@@ -65,6 +66,18 @@ export async function POST(req: Request) {
         status: "Pending",
       } as any,
     });
+
+    // Immutable audit entry — scored by Claude
+    auditResumeScored({
+      organizationId:    session.organizationId,
+      requisitionId,
+      screeningResultId: result.id,
+      actorEmail:        session.email,
+      actorRole:         session.role,
+      fileName:          file.name,
+      resumeText,
+      score,
+    }).catch(() => {});
 
     // Sync hiring funnel counts after each new screening result
     syncHiringFunnel(db, session.organizationId).catch((e) =>

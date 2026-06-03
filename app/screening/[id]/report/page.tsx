@@ -72,6 +72,12 @@ export default function CertificationReportPage({ params }: ReportPageProps) {
       <div className="print:hidden sticky top-0 z-10 bg-white border-b border-border px-8 py-3 flex items-center justify-between">
         <p className="text-sm font-medium">Certification Report — {cert.requisitionTitle}</p>
         <div className="flex gap-2">
+          <a
+            href={`/screening/${id}/audit`}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg border border-border text-xs font-medium hover:bg-muted"
+          >
+            <ShieldCheck className="w-3.5 h-3.5" /> Audit Trail
+          </a>
           <button
             onClick={saveSnapshot}
             disabled={saving}

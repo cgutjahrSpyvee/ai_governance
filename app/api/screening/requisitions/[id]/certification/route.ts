@@ -10,6 +10,7 @@ import {
   syncHiringFunnel,
   logIntegrationEvent,
 } from "@/lib/screening-integration";
+import { auditCertificationSaved } from "@/lib/screening-audit";
 
 export async function GET(
   _req: Request,
@@ -66,6 +67,16 @@ export async function POST(
     });
 
     // 2–5. Sync to dashboard tables (fire-and-forget — don't fail the response)
+    // Audit entry first (most critical — captures what was certified)
+    await auditCertificationSaved({
+      organizationId: session.organizationId,
+      requisitionId:  id,
+      actorEmail:     session.email,
+      actorRole:      session.role,
+      cert,
+      snapshotId:     snapshot.id,
+    }).catch(() => {});
+
     const integrations = [
       syncBiasMetrics(db, cert),
       createCertificationIncident(db, cert, session.email),

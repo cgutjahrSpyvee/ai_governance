@@ -2,6 +2,7 @@ import { getTenantSession } from "@/lib/session";
 import { tenantPrisma } from "@/lib/tenant-prisma";
 import { handleHttpError, requireAdmin } from "@/lib/rbac";
 import { ensureScreeningModel, logIntegrationEvent } from "@/lib/screening-integration";
+import { auditRequisitionCreated } from "@/lib/screening-audit";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -40,6 +41,15 @@ export async function POST(req: Request) {
     await ensureScreeningModel(db).catch((e) =>
       console.warn("[integration] ensureScreeningModel failed:", e)
     );
+
+    // Immutable audit entry
+    await auditRequisitionCreated({
+      organizationId: session.organizationId,
+      requisitionId:  req_.id,
+      actorEmail:     session.email,
+      actorRole:      session.role,
+      title:          body.title,
+    }).catch(() => {});
 
     await logIntegrationEvent(
       db,

@@ -415,3 +415,34 @@ CREATE INDEX "CertificationSnapshot_requisitionId_idx" ON "CertificationSnapshot
 
 ALTER TABLE "CertificationSnapshot" ADD CONSTRAINT "CertificationSnapshot_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "CertificationSnapshot" ADD CONSTRAINT "CertificationSnapshot_requisitionId_fkey" FOREIGN KEY ("requisitionId") REFERENCES "JobRequisition"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable (ScreeningAuditEntry — Phase 3: immutable audit trail)
+CREATE TABLE "ScreeningAuditEntry" (
+    "id" TEXT NOT NULL,
+    "organizationId" TEXT NOT NULL,
+    "requisitionId" TEXT NOT NULL,
+    "screeningResultId" TEXT,
+    "eventType" TEXT NOT NULL,
+    "actorEmail" TEXT NOT NULL,
+    "actorRole" TEXT NOT NULL,
+    "modelVersion" TEXT,
+    "promptVersion" TEXT,
+    "scoreSnapshot" TEXT,
+    "resumeHash" TEXT,
+    "decision" TEXT,
+    "notes" TEXT,
+    "certScore" INTEGER,
+    "certPassed" BOOLEAN,
+    "checksum" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "ScreeningAuditEntry_pkey" PRIMARY KEY ("id")
+);
+
+CREATE INDEX "ScreeningAuditEntry_organizationId_idx" ON "ScreeningAuditEntry"("organizationId");
+CREATE INDEX "ScreeningAuditEntry_requisitionId_idx" ON "ScreeningAuditEntry"("requisitionId");
+CREATE INDEX "ScreeningAuditEntry_screeningResultId_idx" ON "ScreeningAuditEntry"("screeningResultId");
+CREATE INDEX "ScreeningAuditEntry_organizationId_createdAt_idx" ON "ScreeningAuditEntry"("organizationId", "createdAt");
+
+ALTER TABLE "ScreeningAuditEntry" ADD CONSTRAINT "ScreeningAuditEntry_organizationId_fkey" FOREIGN KEY ("organizationId") REFERENCES "Organization"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "ScreeningAuditEntry" ADD CONSTRAINT "ScreeningAuditEntry_requisitionId_fkey" FOREIGN KEY ("requisitionId") REFERENCES "JobRequisition"("id") ON DELETE CASCADE ON UPDATE CASCADE;

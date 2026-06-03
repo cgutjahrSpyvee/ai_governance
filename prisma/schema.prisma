@@ -35,6 +35,7 @@ model Organization {
   jobRequisitions         JobRequisition[]
   screeningResults        ScreeningResult[]
   certificationSnapshots  CertificationSnapshot[]
+  screeningAuditEntries   ScreeningAuditEntry[]
 }
 
 model User {
@@ -248,8 +249,49 @@ model JobRequisition {
 
   screeningResults       ScreeningResult[]
   certificationSnapshots CertificationSnapshot[]
+  auditEntries           ScreeningAuditEntry[]
 
   @@index([organizationId])
+}
+
+model ScreeningAuditEntry {
+  id               String   @id @default(cuid())
+  organizationId   String
+  organization     Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requisitionId    String
+  requisition      JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  screeningResultId String?       // null for requisition-level events
+
+  // What happened
+  eventType        String   // REQUISITION_CREATED | RESUME_UPLOADED | RESUME_SCORED | HUMAN_REVIEWED | CERTIFICATION_SAVED
+
+  // Who did it
+  actorEmail       String
+  actorRole        String
+
+  // AI scoring evidence (RESUME_SCORED)
+  modelVersion     String?  // e.g. "claude-opus-4-8"
+  promptVersion    String?  // SHA-256 of the prompt used
+  scoreSnapshot    String?  // Full JSON score at time of decision
+  resumeHash       String?  // SHA-256 of anonymized resume text (for tamper detection)
+
+  // Human review evidence (HUMAN_REVIEWED)
+  decision         String?  // Approved | Rejected
+  notes            String?
+
+  // Certification evidence (CERTIFICATION_SAVED)
+  certScore        Int?
+  certPassed       Boolean?
+
+  // Immutability: SHA-256 of all material fields
+  checksum         String
+
+  createdAt        DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([requisitionId])
+  @@index([screeningResultId])
+  @@index([organizationId, createdAt])
 }
 
 model CertificationSnapshot {
