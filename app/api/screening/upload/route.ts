@@ -2,6 +2,7 @@ import { getTenantSession } from "@/lib/session";
 import { tenantPrisma } from "@/lib/tenant-prisma";
 import { handleHttpError, requireAdmin, HttpError } from "@/lib/rbac";
 import { extractText, scoreResume } from "@/lib/resume-scorer";
+import { syncHiringFunnel } from "@/lib/screening-integration";
 
 export const maxDuration = 60; // allow up to 60s for Claude scoring
 
@@ -64,6 +65,11 @@ export async function POST(req: Request) {
         status: "Pending",
       } as any,
     });
+
+    // Sync hiring funnel counts after each new screening result
+    syncHiringFunnel(db, session.organizationId).catch((e) =>
+      console.warn("[integration] syncHiringFunnel failed:", e)
+    );
 
     return Response.json(
       { ...result, strengths: score.strengths, gaps: score.gaps, biasFlags: score.biasFlags },

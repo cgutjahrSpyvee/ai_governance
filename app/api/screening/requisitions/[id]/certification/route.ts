@@ -3,6 +3,13 @@ import { tenantPrisma } from "@/lib/tenant-prisma";
 import { handleHttpError, HttpError } from "@/lib/rbac";
 import { computeCertification } from "@/lib/certification-engine";
 import { prisma } from "@/lib/prisma";
+import {
+  syncBiasMetrics,
+  createCertificationIncident,
+  syncComplianceRegulation,
+  syncHiringFunnel,
+  logIntegrationEvent,
+} from "@/lib/screening-integration";
 
 export async function GET(
   _req: Request,
@@ -24,7 +31,7 @@ export async function GET(
   }
 }
 
-// POST — persist a certification snapshot
+// POST — persist certification snapshot AND sync all dashboard tables
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -40,6 +47,7 @@ export async function POST(
     const results = await db.screeningResult.findMany({ where: { requisitionId: id } });
     const cert = computeCertification(results as any, id, req.title);
 
+    // 1. Save certification snapshot
     const snapshot = await prisma.certificationSnapshot.create({
       data: {
         organizationId: session.organizationId,
@@ -55,6 +63,28 @@ export async function POST(
         metricResults: JSON.stringify(cert.metrics),
         generatedBy: session.email,
       },
+    });
+
+    // 2–5. Sync to dashboard tables (fire-and-forget — don't fail the response)
+    const integrations = [
+      syncBiasMetrics(db, cert),
+      createCertificationIncident(db, cert, session.email),
+      syncComplianceRegulation(db, cert),
+      syncHiringFunnel(db, session.organizationId),
+      logIntegrationEvent(
+        db,
+        `Certification ${cert.passed ? "passed" : "failed"}: ${cert.requisitionTitle}`,
+        `Score: ${cert.score}%. Metrics: ${cert.metrics.filter(m => m.passed).length}/${cert.metrics.length} passed. ` +
+          `${cert.totalScreened} candidates screened.`,
+        session.userId
+      ),
+    ];
+
+    const settled = await Promise.allSettled(integrations);
+    settled.forEach((r, i) => {
+      if (r.status === "rejected") {
+        console.warn(`[certification] integration step ${i} failed:`, r.reason);
+      }
     });
 
     return Response.json({ ...cert, snapshotId: snapshot.id }, { status: 201 });

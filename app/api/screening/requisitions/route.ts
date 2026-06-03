@@ -1,6 +1,7 @@
 import { getTenantSession } from "@/lib/session";
 import { tenantPrisma } from "@/lib/tenant-prisma";
 import { handleHttpError, requireAdmin } from "@/lib/rbac";
+import { ensureScreeningModel, logIntegrationEvent } from "@/lib/screening-integration";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -30,9 +31,23 @@ export async function POST(req: Request) {
     requireAdmin(session);
     const body = createSchema.parse(await req.json());
     const db = tenantPrisma(session.organizationId);
+
     const req_ = await db.jobRequisition.create({
       data: { ...body, createdBy: session.email } as any,
     });
+
+    // Register the screening service as an HRModel in the governance dashboard
+    await ensureScreeningModel(db).catch((e) =>
+      console.warn("[integration] ensureScreeningModel failed:", e)
+    );
+
+    await logIntegrationEvent(
+      db,
+      `Requisition created: ${body.title}`,
+      `New job requisition opened by ${session.email}. AI screening model registered.`,
+      session.userId
+    ).catch(() => {});
+
     return Response.json(req_, { status: 201 });
   } catch (e) {
     return handleHttpError(e);
