@@ -144,9 +144,14 @@ function UploadPanel({ requisitionId, onDone }: { requisitionId: string; onDone:
   }
 
   if (result) {
-    const strengths: string[] = JSON.parse(result.strengths || "[]");
-    const gaps: string[] = JSON.parse(result.gaps || "[]");
-    const biasFlags: string[] = JSON.parse(result.biasFlags || "[]");
+    // API returns already-parsed arrays; DB results return JSON strings — handle both
+    const parseField = (v: unknown): string[] => {
+      if (Array.isArray(v)) return v as string[];
+      try { return JSON.parse((v as string) || "[]"); } catch { return []; }
+    };
+    const strengths = parseField(result.strengths);
+    const gaps      = parseField(result.gaps);
+    const biasFlags = parseField(result.biasFlags);
 
     return (
       <div className="bg-muted/30 rounded-xl p-5 space-y-4">

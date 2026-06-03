@@ -52,9 +52,13 @@ function recBadge(rec: string) {
 
 function ReviewCard({ r, onDecide }: { r: ReviewResult; onDecide: (id: string, decision: "Approved" | "Rejected") => void }) {
   const [open, setOpen] = useState(false);
-  const flags: string[] = JSON.parse(r.biasFlags || "[]");
-  const strengths: string[] = JSON.parse(r.strengths || "[]");
-  const gaps: string[] = JSON.parse(r.gaps || "[]");
+  const parseField = (v: unknown): string[] => {
+    if (Array.isArray(v)) return v as string[];
+    try { return JSON.parse((v as string) || "[]"); } catch { return []; }
+  };
+  const flags     = parseField(r.biasFlags);
+  const strengths = parseField(r.strengths);
+  const gaps      = parseField(r.gaps);
 
   return (
     <div className="bg-card rounded-xl border border-amber-200 p-5">
