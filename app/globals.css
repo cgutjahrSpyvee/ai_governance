@@ -24,7 +24,7 @@
 }
 
 :root {
-  /* HumaniCore AI brand palette */
+  /* HumaniCore AI brand palette (UX Redesign Directive v1.0, 2026-07-06) */
   --background: #f8fafc;
   --foreground: #0f172a;
   --card: #ffffff;
@@ -33,15 +33,20 @@
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
   --accent: #eef2f8;
-  --accent-foreground: #1b4a8a;
-  --primary: #1b4a8a;        /* HumaniCore navy */
+  --accent-foreground: #1e2761;
+  --primary: #1e2761;        /* HumaniCore navy */
   --primary-foreground: #ffffff;
-  --destructive: #c0392b;    /* HumaniCore red (heart accent) */
-  --success: #10b981;
-  --warning: #f59e0b;
+  --destructive: #1e2761;    /* Neutralized — Priority 1 uses navy, not crimson */
+  --success: #028090;        /* HumaniCore teal */
+  --warning: #64748b;        /* Neutral slate (no amber verdict color) */
+  /* Brand accents for charts and indicators */
+  --brand-navy: #1e2761;
+  --brand-teal: #028090;
+  --brand-mint: #02c39a;
+  --brand-slate: #64748b;
   --sidebar-bg: #ffffff;     /* White sidebar */
   --sidebar-foreground: #334155;
-  --sidebar-active: #1b4a8a;
+  --sidebar-active: #1e2761;
 }
 
 body {

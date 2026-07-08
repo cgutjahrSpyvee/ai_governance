@@ -2,14 +2,14 @@
 
 import { useHiringFunnel, useModels, useBiasMetrics } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
-import { formatNumber } from "@/lib/utils";
+import {
+  formatNumber, sliceSuppressed, SUPPRESSED_LABEL, getStatusColor,
+  GENDER_COLORS, ETHNICITY_COLORS,
+} from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { UserSearch, AlertCircle, CheckCircle2, TrendingDown } from "lucide-react";
-
-const GENDER_COLORS = ["#2563eb", "#ec4899", "#8b5cf6"];
-const ETHNICITY_COLORS = ["#64748b", "#0ea5e9", "#f59e0b", "#ef4444", "#10b981"];
+import { UserSearch, MessageSquare, ShieldCheck, TrendingUp } from "lucide-react";
 
 export default function HiringPage() {
   const { data: funnel, isLoading: l1, error: e1 } = useHiringFunnel();
@@ -51,7 +51,7 @@ export default function HiringPage() {
     Other: s.other,
   }));
 
-  // Four-fifths rule per stage
+  // Impact ratio (four-fifths) per stage, with small-sample suppression (Section 6)
   const fourFifthsRows = funnel.map((stage) => {
     const total = stage.male + stage.female + stage.nonBinary;
     const rates = {
@@ -65,6 +65,8 @@ export default function HiringPage() {
       maleRatio: +(rates.male / max).toFixed(3),
       femaleRatio: +(rates.female / max).toFixed(3),
       nbRatio: +(rates.nb / max).toFixed(3),
+      nbCount: stage.nonBinary,
+      nbSuppressed: sliceSuppressed(stage.nonBinary, total),
     };
   });
 
@@ -84,29 +86,33 @@ export default function HiringPage() {
             <span className="text-xs">Total Candidates</span>
           </div>
           <p className="text-xl font-bold">{formatNumber(totalCandidates)}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Q1 2026 hiring cycle</p>
         </div>
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <TrendingDown className="w-4 h-4" />
+            <TrendingUp className="w-4 h-4" />
             <span className="text-xs">AI Screening Pass Rate</span>
           </div>
           <p className="text-xl font-bold">{passRate}%</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Q1 2026 hiring cycle</p>
         </div>
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <ShieldCheck className="w-4 h-4 text-[#028090]" />
             <span className="text-xs">Bias Checks Passing</span>
           </div>
-          <p className="text-xl font-bold text-green-600">
+          <p className="text-xl font-bold">
             {hiringBias.filter((b) => b.status === "Pass").length}/{hiringBias.length}
           </p>
+          <p className="text-[11px] text-muted-foreground mt-1">Automated fairness checks</p>
         </div>
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <AlertCircle className="w-4 h-4 text-red-600" />
-            <span className="text-xs">Bias Alerts</span>
+            <MessageSquare className="w-4 h-4 text-[#ae3c24]" />
+            <span className="text-xs">Open Reviews</span>
           </div>
-          <p className="text-xl font-bold text-red-600">{biasFails}</p>
+          <p className="text-xl font-bold text-[#ae3c24]">{biasFails}</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Routed to human review</p>
         </div>
       </div>
 
@@ -145,8 +151,8 @@ export default function HiringPage() {
       </div>
 
       <div className="bg-white rounded-xl border border-border p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-1">Four-Fifths Rule Compliance (Gender)</h3>
-        <p className="text-xs text-muted-foreground mb-4">Values below 0.80 indicate potential adverse impact.</p>
+        <h3 className="text-sm font-semibold text-foreground mb-1">Impact Ratio Analysis (Four-Fifths Rule)</h3>
+        <p className="text-xs text-muted-foreground mb-4">Values below 0.80 fall outside the four-fifths reference threshold and open a review.</p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -160,17 +166,27 @@ export default function HiringPage() {
             </thead>
             <tbody>
               {fourFifthsRows.map((row) => {
-                const minRatio = Math.min(row.maleRatio, row.femaleRatio, row.nbRatio);
-                const pass = minRatio >= 0.8;
+                // Exclude sub-threshold slices from the status determination (Section 6)
+                const ratios = [row.maleRatio, row.femaleRatio, ...(row.nbSuppressed ? [] : [row.nbRatio])];
+                const within = Math.min(...ratios) >= 0.8;
                 return (
                   <tr key={row.stage} className="border-b border-border/50">
                     <td className="py-2.5 font-medium">{row.stage}</td>
-                    <td className={`py-2.5 ${row.maleRatio < 0.8 ? "text-red-600 font-semibold" : ""}`}>{row.maleRatio}</td>
-                    <td className={`py-2.5 ${row.femaleRatio < 0.8 ? "text-red-600 font-semibold" : ""}`}>{row.femaleRatio}</td>
-                    <td className={`py-2.5 ${row.nbRatio < 0.8 ? "text-red-600 font-semibold" : ""}`}>{row.nbRatio}</td>
+                    <td className={`py-2.5 ${row.maleRatio < 0.8 ? "text-[#ae3c24] font-semibold" : ""}`}>{row.maleRatio}</td>
+                    <td className={`py-2.5 ${row.femaleRatio < 0.8 ? "text-[#ae3c24] font-semibold" : ""}`}>{row.femaleRatio}</td>
                     <td className="py-2.5">
-                      <span className={`text-xs px-2 py-0.5 rounded border ${pass ? "text-green-700 bg-green-50 border-green-200" : "text-red-700 bg-red-50 border-red-200"}`}>
-                        {pass ? "Pass" : "Fail"}
+                      {row.nbSuppressed ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground italic">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
+                          {SUPPRESSED_LABEL}
+                        </span>
+                      ) : (
+                        <span className={row.nbRatio < 0.8 ? "text-[#ae3c24] font-semibold" : ""}>{row.nbRatio}</span>
+                      )}
+                    </td>
+                    <td className="py-2.5">
+                      <span className={`text-xs px-2 py-0.5 rounded border ${getStatusColor(within ? "Within reference" : "Review Required")}`}>
+                        {within ? "Within reference" : "Review Required"}
                       </span>
                     </td>
                   </tr>
@@ -178,6 +194,12 @@ export default function HiringPage() {
               })}
             </tbody>
           </table>
+        </div>
+        <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Non-Binary applicant ratios are computed on a slice below the reporting threshold (n &lt; 30). The rate is
+            suppressed from display; the count and full record remain in the audit log, and the review workflow stays active.
+          </p>
         </div>
       </div>
     </div>

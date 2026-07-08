@@ -10,11 +10,13 @@ interface StatCardProps {
   variant?: "default" | "success" | "warning" | "danger";
 }
 
+// Muted earth-tone palette (reference mockup). "danger" → terracotta,
+// "warning" → gold, "success" → sage; "default" → navy brand tint.
 const variantStyles = {
-  default: "bg-blue-50 text-blue-600",
-  success: "bg-green-50 text-green-600",
-  warning: "bg-amber-50 text-amber-600",
-  danger: "bg-red-50 text-red-600",
+  default: "bg-[#1e2761]/10 text-[#1e2761]",
+  success: "bg-[#d7f2e4] text-[#0a7a49]",
+  warning: "bg-[#fbeecd] text-[#8a620a]",
+  danger: "bg-[#f9e4de] text-[#ae3c24]",
 };
 
 export default function StatCard({
@@ -38,7 +40,7 @@ export default function StatCard({
             <p
               className={cn(
                 "text-xs font-medium mt-2",
-                trend.value >= 0 ? "text-green-600" : "text-red-600"
+                trend.value >= 0 ? "text-[#0a7a49]" : "text-[#ae3c24]"
               )}
             >
               {trend.value >= 0 ? "+" : ""}
