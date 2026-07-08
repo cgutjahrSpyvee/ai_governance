@@ -2,11 +2,12 @@
 
 import { useBiasMetrics } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
+import { getStatusColor } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceLine,
+  ReferenceArea, LabelList,
 } from "recharts";
-import { CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import { CheckCircle2, Clock, Flag, BarChart3 } from "lucide-react";
 
 export default function BiasPage() {
   const { data: biasMetrics, isLoading, error } = useBiasMetrics();
@@ -36,29 +37,32 @@ export default function BiasPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-border p-4">
-          <p className="text-xs text-muted-foreground">Total Metrics Tracked</p>
-          <p className="text-xl font-bold mt-1">{biasMetrics.length}</p>
-        </div>
         <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
-          <CheckCircle2 className="w-5 h-5 text-green-600" />
+          <BarChart3 className="w-5 h-5 text-slate-400" />
           <div>
-            <p className="text-xs text-muted-foreground">Passing</p>
-            <p className="text-xl font-bold text-green-600">{passCount}</p>
+            <p className="text-xs text-muted-foreground">Total Metrics Tracked</p>
+            <p className="text-xl font-bold">{biasMetrics.length}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600" />
+          <CheckCircle2 className="w-5 h-5 text-[#0a7a49]" />
           <div>
-            <p className="text-xs text-muted-foreground">Warnings</p>
-            <p className="text-xl font-bold text-amber-600">{warnCount}</p>
+            <p className="text-xs text-muted-foreground">Within Target</p>
+            <p className="text-xl font-bold text-[#0a7a49]">{passCount}</p>
           </div>
         </div>
         <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
-          <XCircle className="w-5 h-5 text-red-600" />
+          <Clock className="w-5 h-5 text-[#8a620a]" />
           <div>
-            <p className="text-xs text-muted-foreground">Failures</p>
-            <p className="text-xl font-bold text-red-600">{failCount}</p>
+            <p className="text-xs text-muted-foreground">Pending Calibrations</p>
+            <p className="text-xl font-bold text-[#8a620a]">{warnCount}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+          <Flag className="w-5 h-5 text-[#ae3c24]" />
+          <div>
+            <p className="text-xs text-muted-foreground">Open Reviews</p>
+            <p className="text-xl font-bold text-[#ae3c24]">{failCount}</p>
           </div>
         </div>
       </div>
@@ -66,12 +70,20 @@ export default function BiasPage() {
       <div className="bg-white rounded-xl border border-border p-5">
         <h3 className="text-sm font-semibold text-foreground mb-4">Average Fairness Score by Model</h3>
         <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={modelSummary} layout="vertical">
+          <BarChart data={modelSummary} layout="vertical" margin={{ right: 44 }}>
+            {/* Translucent target corridor (0.80–1.00) replaces the red threshold line */}
+            <ReferenceArea x1={0.8} x2={1} fill="#02c39a" fillOpacity={0.1} label={{ value: "Target Corridor (0.80–1.00)", position: "insideTopRight", fontSize: 10, fill: "#028090" }} />
             <XAxis type="number" domain={[0, 1]} tick={{ fontSize: 11 }} />
             <YAxis dataKey="model" type="category" width={130} tick={{ fontSize: 11 }} />
             <Tooltip />
-            <ReferenceLine x={0.8} stroke="#ef4444" strokeDasharray="5 5" label={{ value: "Threshold", position: "top", fontSize: 10 }} />
-            <Bar dataKey="avgValue" name="Avg Score" fill="#2563eb" radius={[0, 4, 4, 0]} />
+            <Bar dataKey="avgValue" name="Avg Score" fill="#1e2761" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+              <LabelList
+                dataKey="avgValue"
+                position="right"
+                formatter={(v: number) => Number(v).toFixed(2)}
+                style={{ fontSize: 11, fontWeight: 600, fill: "#334155" }}
+              />
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -86,7 +98,7 @@ export default function BiasPage() {
                 <th className="pb-2 font-medium">Metric</th>
                 <th className="pb-2 font-medium">Protected Group</th>
                 <th className="pb-2 font-medium">Value</th>
-                <th className="pb-2 font-medium">Threshold</th>
+                <th className="pb-2 font-medium">Target</th>
                 <th className="pb-2 font-medium">Status</th>
               </tr>
             </thead>
@@ -96,14 +108,19 @@ export default function BiasPage() {
                   <td className="py-2.5 font-medium">{b.model}</td>
                   <td className="py-2.5 text-muted-foreground">{b.metric}</td>
                   <td className="py-2.5 text-muted-foreground">{b.group}</td>
-                  <td className={`py-2.5 font-mono ${b.value < b.threshold ? "text-red-600 font-semibold" : ""}`}>
+                  <td className={`py-2.5 font-mono ${b.value < b.threshold ? "text-[#ae3c24] font-semibold" : ""}`}>
                     {b.value.toFixed(2)}
                   </td>
                   <td className="py-2.5 font-mono text-muted-foreground">{b.threshold.toFixed(2)}</td>
                   <td className="py-2.5">
-                    <span className={`text-xs px-2 py-0.5 rounded border ${b.status === "Pass" ? "text-green-700 bg-green-50 border-green-200" : b.status === "Warning" ? "text-amber-700 bg-amber-50 border-amber-200" : "text-red-700 bg-red-50 border-red-200"}`}>
-                      {b.status}
-                    </span>
+                    {(() => {
+                      const label = b.status === "Pass" ? "Within Target" : b.status === "Warning" ? "Pending Calibration" : "Review Required";
+                      return (
+                        <span className={`text-xs px-2 py-0.5 rounded border ${getStatusColor(label)}`}>
+                          {label}
+                        </span>
+                      );
+                    })()}
                   </td>
                 </tr>
               ))}

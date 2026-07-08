@@ -2,6 +2,8 @@
 // HR AI Governance Dashboard — Mock Data
 // ============================================================
 
+import { RULE_PACK } from "./rule-pack";
+
 // --- HR AI Models ---
 export interface HRModel {
   id: string;
@@ -44,16 +46,13 @@ export interface Regulation {
   category: string;
 }
 
-export const regulations: Regulation[] = [
-  { name: "NYC Local Law 144", shortName: "LL144", compliance: 92, status: "Compliant", deadline: "2026-07-01", requirements: 24, completed: 22, category: "Employment" },
-  { name: "EU AI Act — High-Risk HR", shortName: "EU AI Act", compliance: 78, status: "Partial", deadline: "2026-08-01", requirements: 38, completed: 30, category: "AI Safety" },
-  { name: "EEOC AI Guidance", shortName: "EEOC", compliance: 88, status: "Compliant", deadline: "2026-06-15", requirements: 18, completed: 16, category: "Employment" },
-  { name: "GDPR Article 22", shortName: "GDPR", compliance: 95, status: "Compliant", deadline: "2026-05-25", requirements: 12, completed: 11, category: "Privacy" },
-  { name: "Illinois AI Video Interview Act", shortName: "IL AIVI", compliance: 100, status: "Compliant", deadline: "2026-12-31", requirements: 8, completed: 8, category: "Employment" },
-  { name: "ISO 42001 AI Management", shortName: "ISO 42001", compliance: 65, status: "Partial", deadline: "2026-09-30", requirements: 42, completed: 27, category: "AI Safety" },
-  { name: "NIST AI RMF", shortName: "NIST RMF", compliance: 72, status: "Partial", deadline: "2026-10-01", requirements: 30, completed: 22, category: "AI Safety" },
-  { name: "SOC 2 Type II", shortName: "SOC 2", compliance: 90, status: "Compliant", deadline: "2026-04-30", requirements: 20, completed: 18, category: "Security" },
-];
+// Derived from the authoritative rule pack (Directive §7.5) — the DB seed and
+// the Compliance screen share one source of truth for regulation entries/dates.
+export const regulations: Regulation[] = RULE_PACK.map(
+  ({ name, shortName, compliance, status, deadline, requirements, completed, category }) => ({
+    name, shortName, compliance, status, deadline, requirements, completed, category,
+  }),
+);
 
 // --- Bias Metrics ---
 export interface BiasMetric {

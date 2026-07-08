@@ -6,7 +6,7 @@ import { formatNumber } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { BarChart3, Users, RefreshCw, CheckCircle2 } from "lucide-react";
+import { BarChart3, Users, RefreshCw, CheckCircle2, Info } from "lucide-react";
 
 export default function PerformancePage() {
   const { data: performance, isLoading, error } = usePerformance();
@@ -45,7 +45,7 @@ export default function PerformancePage() {
         </div>
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <CheckCircle2 className="w-4 h-4 text-green-600" />
+            <CheckCircle2 className="w-4 h-4 text-[#0a7a49]" />
             <span className="text-xs">Calibrated Depts</span>
           </div>
           <p className="text-xl font-bold">{calibratedCount}/{performance.length}</p>
@@ -59,6 +59,13 @@ export default function PerformancePage() {
         </div>
       </div>
 
+      <div className="flex items-start gap-2 p-3 rounded-lg bg-slate-50 border border-slate-200">
+        <Info className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+        <p className="text-xs text-slate-600 leading-relaxed">
+          The {avgOverride}% average override rate reflects <span className="font-semibold text-slate-700">manager judgment applied on top of model output</span> — a governance signal that human review is active, not a defect.
+        </p>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-xl border border-border p-5">
           <h3 className="text-sm font-semibold text-foreground mb-4">AI vs Manager Scores by Department</h3>
@@ -68,22 +75,22 @@ export default function PerformancePage() {
               <YAxis domain={[3, 4.5]} tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="avgAIScore" name="AI Score" fill="#2563eb" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="avgManagerScore" name="Manager Score" fill="#10b981" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="avgAIScore" name="AI Score" fill="#1e2761" radius={[2, 2, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="avgManagerScore" name="Manager Score" fill="#028090" radius={[2, 2, 0, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="bg-white rounded-xl border border-border p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Gender Score Gap by Department</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-4">Score by Gender by Department</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={performance}>
               <XAxis dataKey="department" tick={{ fontSize: 10 }} angle={-20} textAnchor="end" height={50} />
               <YAxis domain={[3, 4.5]} tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="maleAvg" name="Male Avg" fill="#2563eb" radius={[2, 2, 0, 0]} />
-              <Bar dataKey="femaleAvg" name="Female Avg" fill="#ec4899" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="maleAvg" name="Male Avg" fill="#1e2761" radius={[2, 2, 0, 0]} isAnimationActive={false} />
+              <Bar dataKey="femaleAvg" name="Female Avg" fill="#02c39a" radius={[2, 2, 0, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -117,8 +124,8 @@ export default function PerformancePage() {
                   <td className="py-2.5">{d.femaleAvg}</td>
                   <td className="py-2.5">
                     {d.calibrated
-                      ? <span className="text-xs px-2 py-0.5 rounded bg-green-50 text-green-700 border border-green-200">Yes</span>
-                      : <span className="text-xs px-2 py-0.5 rounded bg-red-50 text-red-700 border border-red-200">No</span>}
+                      ? <span className="text-xs px-2 py-0.5 rounded border text-[#0a7a49] bg-[#d7f2e4] border-[#a9e1c6]">Calibrated</span>
+                      : <span className="text-xs px-2 py-0.5 rounded border text-[#8a620a] bg-[#fbeecd] border-[#eed18a]">Calibration Pending</span>}
                   </td>
                 </tr>
               ))}
