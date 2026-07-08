@@ -71,7 +71,7 @@ export default function CompensationPage() {
             <YAxis tick={{ fontSize: 11 }} unit="%" />
             <Tooltip />
             <Bar dataKey="gap" fill="#1e2761" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-              <LabelList dataKey="gap" position="top" formatter={(v: number) => `${v}%`} style={{ fontSize: 10, fill: "#475569" }} />
+              <LabelList dataKey="gap" position="top" formatter={(v: any) => `${v}%`} style={{ fontSize: 10, fill: "#475569" }} />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

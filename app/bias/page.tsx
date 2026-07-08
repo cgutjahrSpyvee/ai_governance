@@ -80,7 +80,7 @@ export default function BiasPage() {
               <LabelList
                 dataKey="avgValue"
                 position="right"
-                formatter={(v: number) => Number(v).toFixed(2)}
+                formatter={(v: any) => Number(v).toFixed(2)}
                 style={{ fontSize: 11, fontWeight: 600, fill: "#334155" }}
               />
             </Bar>
