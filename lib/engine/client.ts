@@ -33,6 +33,16 @@ interface EngineRequestInit {
   revalidate?: number;
 }
 
+/**
+ * One-line server-side trace of every engine call. Never logs the API key or
+ * response bodies — only method, path, outcome and timing. These calls are
+ * server-to-server, so this is the only place they are observable (they do
+ * not appear in the browser network log by design).
+ */
+function traceEngineCall(method: string, path: string, outcome: string, ms: number) {
+  console.log(`[engine] ${method} ${path} → ${outcome} in ${ms}ms`);
+}
+
 async function engineFetch<T>(path: string, init: EngineRequestInit = {}): Promise<T> {
   if (!engineConfigured()) {
     throw new EngineError("Engine is not configured (ENGINE_BASE_URL / ENGINE_API_KEY)", 503);
@@ -41,6 +51,7 @@ async function engineFetch<T>(path: string, init: EngineRequestInit = {}): Promi
   const { method = "GET", body, timeoutMs = 20_000, revalidate = 0 } = init;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = Date.now();
 
   try {
     const res = await fetch(`${BASE_URL}${path}`, {
@@ -58,17 +69,22 @@ async function engineFetch<T>(path: string, init: EngineRequestInit = {}): Promi
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
+      traceEngineCall(method, path, `${res.status} ${res.statusText}`, Date.now() - startedAt);
       throw new EngineError(
         `Engine ${method} ${path} failed (${res.status})${text ? `: ${text.slice(0, 200)}` : ""}`,
         res.status,
       );
     }
-    return (await res.json()) as T;
+    const json = (await res.json()) as T;
+    traceEngineCall(method, path, `${res.status} OK`, Date.now() - startedAt);
+    return json;
   } catch (e) {
     if (e instanceof EngineError) throw e;
     if (e instanceof Error && e.name === "AbortError") {
+      traceEngineCall(method, path, "TIMEOUT", Date.now() - startedAt);
       throw new EngineError(`Engine ${method} ${path} timed out after ${timeoutMs}ms`, 504);
     }
+    traceEngineCall(method, path, "UNREACHABLE", Date.now() - startedAt);
     throw new EngineError(
       `Engine ${method} ${path} unreachable: ${e instanceof Error ? e.message : String(e)}`,
       502,
