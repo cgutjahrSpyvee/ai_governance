@@ -18,6 +18,7 @@ import {
   Users,
   Crown,
   Building2,
+  ServerCog,
   ShieldCheck as ShieldCheckIcon,
 } from "lucide-react";
 import { useState } from "react";
@@ -44,6 +45,7 @@ const adminNav = [
 const superAdminNav = [
   { href: "/super-admin", label: "Platform", icon: Crown },
   { href: "/super-admin/organizations", label: "Organizations", icon: Building2 },
+  { href: "/super-admin/engine-log", label: "Engine Call Log", icon: ServerCog },
 ];
 
 export default function Sidebar({ session }: { session: SessionUser | null }) {

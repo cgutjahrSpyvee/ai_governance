@@ -33,14 +33,64 @@ interface EngineRequestInit {
   revalidate?: number;
 }
 
+export interface EngineCallRecord {
+  id: number;
+  at: string;
+  method: string;
+  path: string;
+  outcome: string;
+  status: number | null;
+  ok: boolean;
+  ms: number;
+}
+
 /**
- * One-line server-side trace of every engine call. Never logs the API key or
- * response bodies — only method, path, outcome and timing. These calls are
- * server-to-server, so this is the only place they are observable (they do
- * not appear in the browser network log by design).
+ * In-memory ring buffer of recent engine calls, surfaced to admins.
+ *
+ * Deliberately never records the API key, request bodies or response bodies —
+ * only method, path, outcome and timing. Held on globalThis so it survives
+ * dev hot-reloads; it is per-process, so a multi-instance deployment shows
+ * only the calls served by the instance answering the request.
  */
-function traceEngineCall(method: string, path: string, outcome: string, ms: number) {
+const MAX_CALL_LOG = 200;
+const globalForLog = globalThis as unknown as {
+  __engineCallLog?: EngineCallRecord[];
+  __engineCallSeq?: number;
+};
+globalForLog.__engineCallLog ??= [];
+globalForLog.__engineCallSeq ??= 0;
+
+export function getEngineCallLog(): EngineCallRecord[] {
+  return [...(globalForLog.__engineCallLog ?? [])].reverse();
+}
+
+/**
+ * One-line server-side trace of every engine call, plus a recorded entry for
+ * the admin call log. These calls are server-to-server, so this is the only
+ * place they are observable — by design they never appear in the browser
+ * network log.
+ */
+function traceEngineCall(
+  method: string,
+  path: string,
+  outcome: string,
+  ms: number,
+  status: number | null,
+  ok: boolean,
+) {
   console.log(`[engine] ${method} ${path} → ${outcome} in ${ms}ms`);
+  const log = globalForLog.__engineCallLog!;
+  log.push({
+    id: ++globalForLog.__engineCallSeq!,
+    at: new Date().toISOString(),
+    method,
+    path,
+    outcome,
+    status,
+    ok,
+    ms,
+  });
+  if (log.length > MAX_CALL_LOG) log.splice(0, log.length - MAX_CALL_LOG);
 }
 
 async function engineFetch<T>(path: string, init: EngineRequestInit = {}): Promise<T> {
@@ -69,22 +119,22 @@ async function engineFetch<T>(path: string, init: EngineRequestInit = {}): Promi
 
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      traceEngineCall(method, path, `${res.status} ${res.statusText}`, Date.now() - startedAt);
+      traceEngineCall(method, path, `${res.status} ${res.statusText}`, Date.now() - startedAt, res.status, false);
       throw new EngineError(
         `Engine ${method} ${path} failed (${res.status})${text ? `: ${text.slice(0, 200)}` : ""}`,
         res.status,
       );
     }
     const json = (await res.json()) as T;
-    traceEngineCall(method, path, `${res.status} OK`, Date.now() - startedAt);
+    traceEngineCall(method, path, `${res.status} OK`, Date.now() - startedAt, res.status, true);
     return json;
   } catch (e) {
     if (e instanceof EngineError) throw e;
     if (e instanceof Error && e.name === "AbortError") {
-      traceEngineCall(method, path, "TIMEOUT", Date.now() - startedAt);
+      traceEngineCall(method, path, "TIMEOUT", Date.now() - startedAt, null, false);
       throw new EngineError(`Engine ${method} ${path} timed out after ${timeoutMs}ms`, 504);
     }
-    traceEngineCall(method, path, "UNREACHABLE", Date.now() - startedAt);
+    traceEngineCall(method, path, "UNREACHABLE", Date.now() - startedAt, null, false);
     throw new EngineError(
       `Engine ${method} ${path} unreachable: ${e instanceof Error ? e.message : String(e)}`,
       502,
