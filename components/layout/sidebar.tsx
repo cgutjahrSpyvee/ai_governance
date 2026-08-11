@@ -33,6 +33,7 @@ const mainNav = [
   { href: "/performance", label: "Performance", icon: BarChart3 },
   { href: "/compensation", label: "Pay Equity", icon: DollarSign },
   { href: "/audit", label: "Audit Logs", icon: FileText },
+  { href: "/audit-report", label: "Audit Report", icon: ShieldCheckIcon },
   { href: "/incidents", label: "Governance Cases", icon: AlertTriangle },
 ];
 
@@ -159,8 +160,9 @@ function NavLink({
   collapsed: boolean;
 }) {
   const Icon = item.icon;
+  // Match on segment boundaries so /audit-report doesn't also activate /audit.
   const isActive =
-    pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+    pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`));
 
   return (
     <Link
