@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { Printer, ShieldCheck, Activity, AlertCircle } from "lucide-react";
 import { getStatusColor } from "@/lib/utils";
 import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
+import { isProvisional } from "@/lib/engine/client";
 import type { GroupStat, GroupSummary } from "@/lib/engine/client";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -258,19 +259,25 @@ export default function AuditReportPage() {
           </div>
 
           {req.applicable_frameworks?.length > 0 && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-medium text-foreground">Applicable frameworks</p>
-              {req.applicable_frameworks.map((f, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
-                  <span className="text-muted-foreground">
-                    {f.statute_citation ?? f.version ?? `Framework ${i + 1}`}
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-foreground">
+                Applicable frameworks ({req.applicable_frameworks.length})
+              </p>
+              {req.applicable_frameworks.map((f) => (
+                <div key={f.rulepack_id} className="text-xs">
+                  <div className="flex items-start gap-2 flex-wrap">
+                    <span className="font-medium text-foreground">{f.framework_name}</span>
+                    {isProvisional(f) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded border text-[#8a620a] bg-[#fbeecd] border-[#eed18a] shrink-0">
+                        Provisional
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-muted-foreground mt-0.5">
+                    {f.jurisdiction}
                     {f.effective_date ? ` · effective ${f.effective_date}` : ""}
-                  </span>
-                  {f.provisional && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded border text-[#8a620a] bg-[#fbeecd] border-[#eed18a] shrink-0">
-                      Provisional
-                    </span>
-                  )}
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5 font-mono">{f.statute_citation}</p>
                 </div>
               ))}
             </div>
@@ -282,18 +289,18 @@ export default function AuditReportPage() {
                 Feature review flags ({req.feature_prohibitions.length})
               </p>
               <div className="flex flex-wrap gap-1.5">
-                {req.feature_prohibitions.map((p, i) => (
+                {req.feature_prohibitions.map((p) => (
                   <span
-                    key={i}
-                    title={p.legal_basis}
+                    key={p.feature_pattern}
+                    title={p.rationale ?? p.legal_basis}
                     className={`text-[10px] px-2 py-0.5 rounded border ${
-                      p.type === "prohibited"
+                      p.prohibition_type === "prohibited"
                         ? "text-[#ae3c24] bg-[#f9e4de] border-[#efc5b8]"
                         : "text-[#8a620a] bg-[#fbeecd] border-[#eed18a]"
                     }`}
                   >
                     {p.feature_pattern}
-                    {p.type ? ` · ${p.type.replace(/_/g, " ")}` : ""}
+                    {p.prohibition_type ? ` · ${p.prohibition_type.replace(/_/g, " ")}` : ""}
                   </span>
                 ))}
               </div>

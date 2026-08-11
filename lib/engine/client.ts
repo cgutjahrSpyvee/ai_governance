@@ -143,20 +143,36 @@ export interface ReportListing {
 }
 
 export interface ApplicableFramework {
-  statute_citation?: string;
+  rulepack_id: string;
+  framework_name: string;
+  jurisdiction: string;
+  statute_citation: string;
   effective_date?: string;
   version?: string;
   status?: string;
   provisional?: boolean;
-  [k: string]: unknown;
 }
 
 export interface FeatureProhibition {
   feature_pattern: string;
   /** proxy_concern | flag_required | prohibited */
-  type?: string;
+  prohibition_type: string;
   legal_basis?: string;
-  [k: string]: unknown;
+  rationale?: string;
+}
+
+export interface ProtectedClass {
+  code: string;
+  label: string;
+}
+
+/**
+ * The engine marks unsettled canon two ways: a `provisional` flag, and a
+ * "CLO CONFIRM" marker inline in the citation. Both must render as
+ * provisional rather than settled law (Directive §5).
+ */
+export function isProvisional(f: ApplicableFramework): boolean {
+  return Boolean(f.provisional) || /CLO CONFIRM/i.test(f.statute_citation ?? "");
 }
 
 export interface ResolvedRequirements {
@@ -170,7 +186,7 @@ export interface ResolvedRequirements {
   human_oversight_required?: boolean;
   min_audit_frequency_days?: number;
   applicable_frameworks: ApplicableFramework[];
-  protected_classes: unknown[];
+  protected_classes: ProtectedClass[];
   feature_prohibitions: FeatureProhibition[];
 }
 

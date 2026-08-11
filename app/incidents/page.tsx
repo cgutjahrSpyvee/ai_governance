@@ -2,6 +2,7 @@
 
 import { useIncidents } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { getPriorityColor, getPriorityLabel, getStatusColor, formatDate, vocab } from "@/lib/utils";
 import { ClipboardList, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
 
@@ -33,6 +34,8 @@ export default function IncidentsPage() {
           AI-related cases, bias reviews, and employee grievance intake
         </p>
       </div>
+
+      <DemoDataBanner />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-border p-4">

@@ -2,6 +2,7 @@
 
 import { usePerformance } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { formatNumber } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
@@ -27,6 +28,8 @@ export default function PerformancePage() {
           Monitoring AI-assisted performance scoring, manager overrides, and demographic equity
         </p>
       </div>
+
+      <DemoDataBanner />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-border p-4">

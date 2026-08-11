@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useModels } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { getPriorityColor, getPriorityLabel, getStatusColor, formatDate } from "@/lib/utils";
 import { Bot, Filter } from "lucide-react";
 
@@ -40,6 +41,8 @@ export default function ModelsPage() {
           All AI models deployed across HR processes
         </p>
       </div>
+
+      <DemoDataBanner />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {["Production", "Staging", "Under Review", "Retired"].map((status) => {

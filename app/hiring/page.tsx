@@ -1,39 +1,51 @@
 "use client";
 
-import { useHiringFunnel, useModels, useBiasMetrics } from "@/lib/api-client";
+import useSWR from "swr";
+import { useHiringFunnel } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
-import {
-  formatNumber, sliceSuppressed, SUPPRESSED_LABEL, getStatusColor,
-  GENDER_COLORS, ETHNICITY_COLORS,
-} from "@/lib/utils";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
-import { UserSearch, MessageSquare, ShieldCheck, TrendingUp } from "lucide-react";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
+import { formatNumber, getStatusColor, GENDER_COLORS, ETHNICITY_COLORS } from "@/lib/utils";
+import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
+import type { GroupStat, GroupSummary } from "@/lib/engine/client";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { UserSearch, ShieldCheck, TrendingUp, MessageSquare, Radio, AlertCircle } from "lucide-react";
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
+const attrLabel = (a: string) =>
+  a.replace(/^canonical_/, "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+const groupLabel = (g: string) =>
+  g.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+function LiveBadge() {
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border text-[#0a7a49] bg-[#d7f2e4] border-[#a9e1c6]">
+      <Radio className="w-2.5 h-2.5" /> Live from engine
+    </span>
+  );
+}
+
+/** Hiring-relevant attributes drawn from the engine's audit run. */
+const HIRING_ATTRS = ["canonical_gender", "canonical_race", "canonical_age_band"];
 
 export default function HiringPage() {
   const { data: funnel, isLoading: l1, error: e1 } = useHiringFunnel();
-  const { data: models, isLoading: l2, error: e2 } = useModels();
-  const { data: biasMetrics, isLoading: l3, error: e3 } = useBiasMetrics();
+  const { data: engine, isLoading: l2 } = useSWR<AuditReportPayload>(
+    "/api/engine/audit-report",
+    fetcher,
+  );
 
-  if (l1 || l2 || l3) return <PageLoading />;
-  if (e1 || e2 || e3) return <PageError />;
-  if (!funnel || !models || !biasMetrics) return <PageError />;
+  if (l1 || l2) return <PageLoading />;
+  if (e1 || !funnel) return <PageError />;
+
+  const report = engine?.report ?? null;
+  const threshold = engine?.requirements?.governing_air_threshold ?? 0.8;
 
   const firstStage = funnel[0];
-  const totalCandidates = firstStage ? firstStage.male + firstStage.female + firstStage.nonBinary : 0;
-  const screeningStage = funnel.find((f) => f.stage === "AI Screening");
-  const passRate = firstStage && screeningStage
-    ? +(
-        ((screeningStage.male + screeningStage.female + screeningStage.nonBinary) /
-          (firstStage.male + firstStage.female + firstStage.nonBinary)) *
-        100
-      ).toFixed(1)
+  const totalCandidates = firstStage
+    ? firstStage.male + firstStage.female + firstStage.nonBinary
     : 0;
-
-  const hiringModelNames = new Set(models.filter((m) => m.function === "Hiring").map((m) => m.name));
-  const hiringBias = biasMetrics.filter((b) => hiringModelNames.has(b.model));
-  const biasFails = hiringBias.filter((b) => b.status === "Fail").length;
 
   const genderFunnelData = funnel.map((s) => ({
     stage: s.stage,
@@ -41,7 +53,6 @@ export default function HiringPage() {
     Female: s.female,
     "Non-Binary": s.nonBinary,
   }));
-
   const ethnicityFunnelData = funnel.map((s) => ({
     stage: s.stage,
     White: s.white,
@@ -51,68 +62,156 @@ export default function HiringPage() {
     Other: s.other,
   }));
 
-  // Impact ratio (four-fifths) per stage, with small-sample suppression (Section 6)
-  const fourFifthsRows = funnel.map((stage) => {
-    const total = stage.male + stage.female + stage.nonBinary;
-    const rates = {
-      male: stage.male / total,
-      female: stage.female / total,
-      nb: stage.nonBinary / total,
-    };
-    const max = Math.max(rates.male, rates.female, rates.nb);
-    return {
-      stage: stage.stage,
-      maleRatio: +(rates.male / max).toFixed(3),
-      femaleRatio: +(rates.female / max).toFixed(3),
-      nbRatio: +(rates.nb / max).toFixed(3),
-      nbCount: stage.nonBinary,
-      nbSuppressed: sliceSuppressed(stage.nonBinary, total),
-    };
-  });
+  // Live impact ratios for hiring-relevant protected attributes.
+  const liveRows: {
+    attribute: string;
+    group: string;
+    count: number;
+    selectionRate: number;
+    impactRatio?: number;
+    isReference: boolean;
+  }[] = [];
+  if (report) {
+    for (const attr of HIRING_ATTRS) {
+      const metrics = report.group_metrics[attr];
+      if (!metrics) continue;
+      const summary = metrics._summary as GroupSummary;
+      for (const [group, stat] of Object.entries(metrics)) {
+        if (group === "_summary") continue;
+        const s = stat as GroupStat;
+        liveRows.push({
+          attribute: attr,
+          group,
+          count: s.count,
+          selectionRate: s.selection_rate,
+          impactRatio: summary.impact_ratios?.[group],
+          isReference: group === summary.reference_group,
+        });
+      }
+    }
+  }
+  const scored = liveRows.filter((x) => x.impactRatio !== undefined);
+  const openReviews = scored.filter((x) => (x.impactRatio as number) < threshold).length;
+  const withinTarget = scored.length - openReviews;
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Hiring & Recruitment AI Governance</h1>
+        <h1 className="text-2xl font-bold text-foreground">Hiring &amp; Recruitment AI Governance</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Fairness monitoring across AI-assisted hiring pipeline
+          Fairness monitoring across the AI-assisted hiring pipeline
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* ── LIVE: impact ratio analysis from the engine ──────────────── */}
+      <div className="bg-white rounded-xl border border-border p-5">
+        <div className="flex items-start justify-between gap-3 mb-1 flex-wrap">
+          <h3 className="text-sm font-semibold text-foreground">
+            Impact Ratio Analysis (Four-Fifths Rule)
+          </h3>
+          <LiveBadge />
+        </div>
+
+        {!report ? (
+          <div className="flex items-start gap-2 p-3 mt-3 rounded-lg bg-slate-50 border border-slate-200">
+            <AlertCircle className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-slate-600">
+              <span className="font-medium">Impact ratios unavailable.</span>{" "}
+              {engine?.engineError ?? "The governance engine returned no audit run."}
+            </p>
+          </div>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground mb-4">
+              Run {report.run_id} · {report.total_records.toLocaleString()} records · values below{" "}
+              {threshold.toFixed(2)} fall outside the four-fifths reference threshold and open a review.
+            </p>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+              {[
+                { label: "Records Analyzed", value: report.total_records.toLocaleString(), icon: UserSearch, cls: "" },
+                { label: "Overall Selection Rate", value: pct(report.overall_selection_rate), icon: TrendingUp, cls: "" },
+                { label: "Groups Within Target", value: withinTarget, icon: ShieldCheck, cls: "text-[#0a7a49]" },
+                { label: "Open Reviews", value: openReviews, icon: MessageSquare, cls: "text-[#ae3c24]" },
+              ].map((c) => (
+                <div key={c.label} className="rounded-lg border border-border/60 p-3">
+                  <div className="flex items-center gap-2 text-muted-foreground mb-1">
+                    <c.icon className={`w-4 h-4 ${c.cls}`} />
+                    <span className="text-xs">{c.label}</span>
+                  </div>
+                  <p className={`text-xl font-bold ${c.cls}`}>{c.value}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-muted-foreground">
+                    <th className="pb-2 font-medium">Protected Attribute</th>
+                    <th className="pb-2 font-medium">Group</th>
+                    <th className="pb-2 font-medium">Count</th>
+                    <th className="pb-2 font-medium">Selection Rate</th>
+                    <th className="pb-2 font-medium">Impact Ratio</th>
+                    <th className="pb-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {liveRows.map((x) => {
+                    const within = x.impactRatio === undefined || x.impactRatio >= threshold;
+                    const label = within ? "Within reference" : "Review Required";
+                    return (
+                      <tr
+                        key={`${x.attribute}-${x.group}`}
+                        className="border-b border-border/50 hover:bg-muted/20"
+                      >
+                        <td className="py-2.5 font-medium">{attrLabel(x.attribute)}</td>
+                        <td className="py-2.5 text-muted-foreground">
+                          {groupLabel(x.group)}
+                          {x.isReference && (
+                            <span className="ml-1.5 text-[10px] text-muted-foreground">(ref)</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 text-muted-foreground">{x.count.toLocaleString()}</td>
+                        <td className="py-2.5 font-mono">{pct(x.selectionRate)}</td>
+                        <td className={`py-2.5 font-mono ${!within ? "text-[#ae3c24] font-semibold" : ""}`}>
+                          {x.impactRatio === undefined ? "—" : x.impactRatio.toFixed(3)}
+                        </td>
+                        <td className="py-2.5">
+                          <span className={`text-xs px-2 py-0.5 rounded border ${getStatusColor(label)}`}>
+                            {label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* ── DEMO: candidate funnel (no engine source) ────────────────── */}
+      <div className="pt-2">
+        <h2 className="text-sm font-semibold text-foreground mb-3">Candidate Pipeline</h2>
+        <DemoDataBanner detail="The candidate funnel below is seeded pipeline data for demonstration. The engine exposes audit-run metrics, not stage-by-stage pipeline counts, so these stage figures are not audit findings." />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <UserSearch className="w-4 h-4" />
-            <span className="text-xs">Total Candidates</span>
+            <span className="text-xs">Total Candidates (seeded)</span>
           </div>
           <p className="text-xl font-bold">{formatNumber(totalCandidates)}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">Q1 2026 hiring cycle</p>
         </div>
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <TrendingUp className="w-4 h-4" />
-            <span className="text-xs">AI Screening Pass Rate</span>
+            <span className="text-xs">Pipeline Stages (seeded)</span>
           </div>
-          <p className="text-xl font-bold">{passRate}%</p>
-          <p className="text-[11px] text-muted-foreground mt-1">Q1 2026 hiring cycle</p>
-        </div>
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <ShieldCheck className="w-4 h-4 text-[#028090]" />
-            <span className="text-xs">Bias Checks Passing</span>
-          </div>
-          <p className="text-xl font-bold">
-            {hiringBias.filter((b) => b.status === "Pass").length}/{hiringBias.length}
-          </p>
-          <p className="text-[11px] text-muted-foreground mt-1">Automated fairness checks</p>
-        </div>
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <MessageSquare className="w-4 h-4 text-[#ae3c24]" />
-            <span className="text-xs">Open Reviews</span>
-          </div>
-          <p className="text-xl font-bold text-[#ae3c24]">{biasFails}</p>
-          <p className="text-[11px] text-muted-foreground mt-1">Routed to human review</p>
+          <p className="text-xl font-bold">{funnel.length}</p>
         </div>
       </div>
 
@@ -125,9 +224,9 @@ export default function HiringPage() {
               <YAxis dataKey="stage" type="category" width={90} tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Male" fill={GENDER_COLORS[0]} radius={[0, 2, 2, 0]} />
-              <Bar dataKey="Female" fill={GENDER_COLORS[1]} radius={[0, 2, 2, 0]} />
-              <Bar dataKey="Non-Binary" fill={GENDER_COLORS[2]} radius={[0, 2, 2, 0]} />
+              <Bar dataKey="Male" fill={GENDER_COLORS[0]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              <Bar dataKey="Female" fill={GENDER_COLORS[1]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              <Bar dataKey="Non-Binary" fill={GENDER_COLORS[2]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -140,66 +239,13 @@ export default function HiringPage() {
               <YAxis dataKey="stage" type="category" width={90} tick={{ fontSize: 11 }} />
               <Tooltip />
               <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="White" fill={ETHNICITY_COLORS[0]} radius={[0, 2, 2, 0]} />
-              <Bar dataKey="Black" fill={ETHNICITY_COLORS[1]} radius={[0, 2, 2, 0]} />
-              <Bar dataKey="Hispanic" fill={ETHNICITY_COLORS[2]} radius={[0, 2, 2, 0]} />
-              <Bar dataKey="Asian" fill={ETHNICITY_COLORS[3]} radius={[0, 2, 2, 0]} />
-              <Bar dataKey="Other" fill={ETHNICITY_COLORS[4]} radius={[0, 2, 2, 0]} />
+              <Bar dataKey="White" fill={ETHNICITY_COLORS[0]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              <Bar dataKey="Black" fill={ETHNICITY_COLORS[1]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              <Bar dataKey="Hispanic" fill={ETHNICITY_COLORS[2]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              <Bar dataKey="Asian" fill={ETHNICITY_COLORS[3]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              <Bar dataKey="Other" fill={ETHNICITY_COLORS[4]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl border border-border p-5">
-        <h3 className="text-sm font-semibold text-foreground mb-1">Impact Ratio Analysis (Four-Fifths Rule)</h3>
-        <p className="text-xs text-muted-foreground mb-4">Values below 0.80 fall outside the four-fifths reference threshold and open a review.</p>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="pb-2 font-medium">Stage</th>
-                <th className="pb-2 font-medium">Male Ratio</th>
-                <th className="pb-2 font-medium">Female Ratio</th>
-                <th className="pb-2 font-medium">Non-Binary Ratio</th>
-                <th className="pb-2 font-medium">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {fourFifthsRows.map((row) => {
-                // Exclude sub-threshold slices from the status determination (Section 6)
-                const ratios = [row.maleRatio, row.femaleRatio, ...(row.nbSuppressed ? [] : [row.nbRatio])];
-                const within = Math.min(...ratios) >= 0.8;
-                return (
-                  <tr key={row.stage} className="border-b border-border/50">
-                    <td className="py-2.5 font-medium">{row.stage}</td>
-                    <td className={`py-2.5 ${row.maleRatio < 0.8 ? "text-[#ae3c24] font-semibold" : ""}`}>{row.maleRatio}</td>
-                    <td className={`py-2.5 ${row.femaleRatio < 0.8 ? "text-[#ae3c24] font-semibold" : ""}`}>{row.femaleRatio}</td>
-                    <td className="py-2.5">
-                      {row.nbSuppressed ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground italic">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0" />
-                          {SUPPRESSED_LABEL}
-                        </span>
-                      ) : (
-                        <span className={row.nbRatio < 0.8 ? "text-[#ae3c24] font-semibold" : ""}>{row.nbRatio}</span>
-                      )}
-                    </td>
-                    <td className="py-2.5">
-                      <span className={`text-xs px-2 py-0.5 rounded border ${getStatusColor(within ? "Within reference" : "Review Required")}`}>
-                        {within ? "Within reference" : "Review Required"}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-200">
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Non-Binary applicant ratios are computed on a slice below the reporting threshold (n &lt; 30). The rate is
-            suppressed from display; the count and full record remain in the audit log, and the review workflow stays active.
-          </p>
         </div>
       </div>
     </div>

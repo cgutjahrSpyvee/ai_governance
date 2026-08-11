@@ -2,6 +2,7 @@
 
 import { useAuditLogs } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { auditContext } from "@/lib/utils";
 import { FileText, Flag, Clock, Users } from "lucide-react";
 
@@ -31,6 +32,8 @@ export default function AuditPage() {
           Complete audit trail of HR AI decisions, changes, and reviews · source event strings render verbatim
         </p>
       </div>
+
+      <DemoDataBanner />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-border p-4">
