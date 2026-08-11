@@ -3,6 +3,7 @@
 import StatCard from "@/components/dashboard/stat-card";
 import { PageLoading, PageError } from "@/components/ui/loading";
 import EmptyOrgState from "@/components/layout/empty-org";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { useSession } from "next-auth/react";
 import {
   Bot,
@@ -77,6 +78,8 @@ export default function OverviewPage() {
           AI governance status across HR processes
         </p>
       </div>
+
+      <DemoDataBanner detail="Overview aggregates seeded model, case and completion data for demonstration. Live governance results are on Compliance, Bias & Fairness, Hiring AI and the Audit Report." />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         <StatCard title="Total AI Models" value={models.length} subtitle={`${activeModels} active`} icon={Bot} />
