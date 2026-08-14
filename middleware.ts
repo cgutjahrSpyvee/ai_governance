@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { SHOW_DEMO_DATA, DEMO_ONLY_ROUTES } from "@/lib/demo-mode";
 
 const PUBLIC_PATHS = [
   "/login",
@@ -29,6 +30,18 @@ export async function middleware(req: NextRequest) {
     url.pathname = "/login";
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);
+  }
+
+  // Screens with no live governance-engine source are not reachable at all
+  // unless demo mode is explicitly enabled — hiding them from the nav is not
+  // enough, since the URLs would still serve seeded figures.
+  if (
+    !SHOW_DEMO_DATA &&
+    (DEMO_ONLY_ROUTES as readonly string[]).some(
+      (p) => pathname === p || pathname.startsWith(p + "/"),
+    )
+  ) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   const role = token.role as string | undefined;

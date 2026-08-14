@@ -24,6 +24,7 @@ import {
 import { useState } from "react";
 import type { SessionUser } from "@/lib/rbac";
 import { HumaniCoreBrandMark, HumaniCoreWordmark } from "@/components/layout/humanicore-logo";
+import { SHOW_DEMO_DATA, DEMO_ONLY_ROUTES } from "@/lib/demo-mode";
 
 const mainNav = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -85,9 +86,16 @@ export default function Sidebar({ session }: { session: SessionUser | null }) {
       <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
         {hasOrgContext && (
           <Section label="Governance" collapsed={collapsed}>
-            {mainNav.map((item) => (
-              <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
-            ))}
+            {mainNav
+              // Screens with no live engine source stay hidden unless demo mode is on.
+              .filter(
+                (item) =>
+                  SHOW_DEMO_DATA ||
+                  !(DEMO_ONLY_ROUTES as readonly string[]).includes(item.href),
+              )
+              .map((item) => (
+                <NavLink key={item.href} item={item} pathname={pathname} collapsed={collapsed} />
+              ))}
           </Section>
         )}
 

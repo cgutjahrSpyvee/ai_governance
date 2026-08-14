@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { useHiringFunnel } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
 import DemoDataBanner from "@/components/layout/demo-data-banner";
+import { SHOW_DEMO_DATA } from "@/lib/demo-mode";
 import { formatNumber, getStatusColor, GENDER_COLORS, ETHNICITY_COLORS } from "@/lib/utils";
 import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
 import type { GroupStat, GroupSummary } from "@/lib/engine/client";
@@ -192,62 +193,67 @@ export default function HiringPage() {
         )}
       </div>
 
-      {/* ── DEMO: candidate funnel (no engine source) ────────────────── */}
-      <div className="pt-2">
-        <h2 className="text-sm font-semibold text-foreground mb-3">Candidate Pipeline</h2>
-        <DemoDataBanner detail="The candidate funnel below is seeded pipeline data for demonstration. The engine exposes audit-run metrics, not stage-by-stage pipeline counts, so these stage figures are not audit findings." />
-      </div>
+      {SHOW_DEMO_DATA && (
+        <>
+        {/* ── DEMO: candidate funnel (no engine source) ────────────────── */}
+        <div className="pt-2">
+          <h2 className="text-sm font-semibold text-foreground mb-3">Candidate Pipeline</h2>
+          <DemoDataBanner detail="The candidate funnel below is seeded pipeline data for demonstration. The engine exposes audit-run metrics, not stage-by-stage pipeline counts, so these stage figures are not audit findings." />
+        </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <UserSearch className="w-4 h-4" />
-            <span className="text-xs">Total Candidates (seeded)</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-white rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <UserSearch className="w-4 h-4" />
+              <span className="text-xs">Total Candidates (seeded)</span>
+            </div>
+            <p className="text-xl font-bold">{formatNumber(totalCandidates)}</p>
           </div>
-          <p className="text-xl font-bold">{formatNumber(totalCandidates)}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <TrendingUp className="w-4 h-4" />
-            <span className="text-xs">Pipeline Stages (seeded)</span>
+          <div className="bg-white rounded-xl border border-border p-4">
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <TrendingUp className="w-4 h-4" />
+              <span className="text-xs">Pipeline Stages (seeded)</span>
+            </div>
+            <p className="text-xl font-bold">{funnel.length}</p>
           </div>
-          <p className="text-xl font-bold">{funnel.length}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl border border-border p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Candidate Funnel by Gender</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={genderFunnelData} layout="vertical">
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis dataKey="stage" type="category" width={90} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="Male" fill={GENDER_COLORS[0]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-              <Bar dataKey="Female" fill={GENDER_COLORS[1]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-              <Bar dataKey="Non-Binary" fill={GENDER_COLORS[2]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl border border-border p-5">
-          <h3 className="text-sm font-semibold text-foreground mb-4">Candidate Funnel by Ethnicity</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={ethnicityFunnelData} layout="vertical">
-              <XAxis type="number" tick={{ fontSize: 11 }} />
-              <YAxis dataKey="stage" type="category" width={90} tick={{ fontSize: 11 }} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar dataKey="White" fill={ETHNICITY_COLORS[0]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-              <Bar dataKey="Black" fill={ETHNICITY_COLORS[1]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-              <Bar dataKey="Hispanic" fill={ETHNICITY_COLORS[2]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-              <Bar dataKey="Asian" fill={ETHNICITY_COLORS[3]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-              <Bar dataKey="Other" fill={ETHNICITY_COLORS[4]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Candidate Funnel by Gender</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={genderFunnelData} layout="vertical">
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis dataKey="stage" type="category" width={90} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="Male" fill={GENDER_COLORS[0]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+                <Bar dataKey="Female" fill={GENDER_COLORS[1]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+                <Bar dataKey="Non-Binary" fill={GENDER_COLORS[2]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          <div className="bg-white rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Candidate Funnel by Ethnicity</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={ethnicityFunnelData} layout="vertical">
+                <XAxis type="number" tick={{ fontSize: 11 }} />
+                <YAxis dataKey="stage" type="category" width={90} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="White" fill={ETHNICITY_COLORS[0]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+                <Bar dataKey="Black" fill={ETHNICITY_COLORS[1]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+                <Bar dataKey="Hispanic" fill={ETHNICITY_COLORS[2]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+                <Bar dataKey="Asian" fill={ETHNICITY_COLORS[3]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+                <Bar dataKey="Other" fill={ETHNICITY_COLORS[4]} radius={[0, 2, 2, 0]} isAnimationActive={false} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-      </div>
+        </>
+      )}
+
     </div>
   );
 }
