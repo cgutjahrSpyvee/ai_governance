@@ -7,6 +7,10 @@ const PUBLIC_PATHS = [
   "/login",
   "/accept-invite",
   "/api/auth",
+  // render.yaml points its health check here; gating it behind auth makes the
+  // probe follow a redirect to /login instead of getting a 200. The route
+  // returns only {status:"ok"} and exposes nothing sensitive.
+  "/api/healthz",
   "/_next",
   "/favicon.ico",
 ];
