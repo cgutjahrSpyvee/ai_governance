@@ -4,12 +4,18 @@ import Link from "next/link";
 import useSWR from "swr";
 import { useSession } from "next-auth/react";
 import EmptyOrgState from "@/components/layout/empty-org";
+import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { PageLoading } from "@/components/ui/loading";
-import { getStatusColor } from "@/lib/utils";
+import { SHOW_DEMO_DATA } from "@/lib/demo-mode";
+import {
+  formatNumber, getStatusColor, getPriorityColor, getPriorityLabel, vocab, PRIORITY_CHART,
+} from "@/lib/utils";
 import { isProvisional } from "@/lib/engine/client";
+import { useModels, useRegulations, useIncidents, usePerformance } from "@/lib/api-client";
 import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
 import type { RequirementsPayload } from "@/app/api/engine/requirements/route";
-import type { GroupStat, GroupSummary } from "@/lib/engine/client";
+import type { GroupSummary } from "@/lib/engine/client";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import {
   ShieldCheck, Flag, Layers, Gauge, Radio, AlertCircle, ArrowRight, Scale,
 } from "lucide-react";
@@ -22,9 +28,8 @@ const attrLabel = (a: string) =>
 const groupLabel = (g: string) =>
   g.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
-function decisionLabel(d: string) {
-  return d.split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
-}
+const decisionLabel = (d: string) =>
+  d.split("_").map((w) => w.charAt(0) + w.slice(1).toLowerCase()).join(" ");
 
 function LiveBadge() {
   return (
@@ -38,32 +43,37 @@ export default function OverviewPage() {
   const { data: session } = useSession();
   const hasOrg = !!session?.user?.organizationId;
 
-  const { data: engine, isLoading: l1 } = useSWR<AuditReportPayload>(
+  const { data: engine, isLoading: le } = useSWR<AuditReportPayload>(
     "/api/engine/audit-report",
     fetcher,
   );
-  const { data: reqPayload, isLoading: l2 } = useSWR<RequirementsPayload>(
+  const { data: reqPayload, isLoading: lr } = useSWR<RequirementsPayload>(
     "/api/engine/requirements",
     fetcher,
   );
 
+  // Seeded dashboard data — only rendered when demo content is enabled.
+  const { data: models } = useModels();
+  const { data: regulations } = useRegulations();
+  const { data: incidents } = useIncidents();
+  const { data: performance } = usePerformance();
+
   if (session && !hasOrg) return <EmptyOrgState />;
-  if (l1 || l2) return <PageLoading />;
+  if (le || lr) return <PageLoading />;
 
   const report = engine?.report ?? null;
   const req = reqPayload?.requirements ?? null;
-  const threshold = req?.governing_air_threshold ?? engine?.requirements?.governing_air_threshold ?? 0.8;
+  const threshold =
+    req?.governing_air_threshold ?? engine?.requirements?.governing_air_threshold ?? 0.8;
 
-  // Flatten every measured group so the overview can summarise open reviews.
   const rows: { attribute: string; group: string; ratio: number }[] = [];
   if (report) {
     for (const attr of report.protected_attributes) {
       const metrics = report.group_metrics[attr];
       if (!metrics) continue;
       const summary = metrics._summary as GroupSummary;
-      for (const [group, stat] of Object.entries(metrics)) {
+      for (const group of Object.keys(metrics)) {
         if (group === "_summary") continue;
-        void (stat as GroupStat);
         const ratio = summary.impact_ratios?.[group];
         if (ratio !== undefined) rows.push({ attribute: attr, group, ratio });
       }
@@ -72,6 +82,22 @@ export default function OverviewPage() {
   const openReviews = rows.filter((r) => r.ratio < threshold).sort((a, b) => a.ratio - b.ratio);
   const withinTarget = rows.length - openReviews.length;
   const provisionalCount = req?.applicable_frameworks.filter(isProvisional).length ?? 0;
+
+  // ── Seeded aggregates ───────────────────────────────────────────────
+  const showDemo = SHOW_DEMO_DATA && models && regulations && incidents && performance;
+  const activityByFunction = models
+    ? Array.from(new Set(models.map((m) => m.function)))
+        .map((fn) => ({ domain: fn, count: models.filter((m) => m.function === fn).length }))
+        .sort((a, b) => b.count - a.count)
+    : [];
+  const maxActivity = Math.max(1, ...activityByFunction.map((a) => a.count));
+  const pieData = models
+    ? [
+        { name: "Priority 1", value: models.filter((m) => m.riskTier === "High").length, color: PRIORITY_CHART.p1 },
+        { name: "Priority 2", value: models.filter((m) => m.riskTier === "Medium").length, color: PRIORITY_CHART.p2 },
+        { name: "Standard Review Queue", value: models.filter((m) => m.riskTier === "Low").length, color: PRIORITY_CHART.standard },
+      ]
+    : [];
 
   return (
     <div className="space-y-6">
@@ -114,7 +140,6 @@ export default function OverviewPage() {
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">Run {report.run_id}</p>
             </div>
-
             <div className="bg-white rounded-xl border border-border p-5">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Flag className="w-4 h-4 text-[#ae3c24]" />
@@ -125,7 +150,6 @@ export default function OverviewPage() {
                 {report.count_critical} critical · {report.count_observation} observations
               </p>
             </div>
-
             <div className="bg-white rounded-xl border border-border p-5">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Scale className="w-4 h-4 text-[#ae3c24]" />
@@ -136,7 +160,6 @@ export default function OverviewPage() {
                 {withinTarget} of {rows.length} groups within target
               </p>
             </div>
-
             <div className="bg-white rounded-xl border border-border p-5">
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Gauge className="w-4 h-4" />
@@ -150,14 +173,10 @@ export default function OverviewPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Groups requiring review */}
             <div className="bg-white rounded-xl border border-border p-5">
               <div className="flex items-center justify-between gap-3 mb-1">
                 <h3 className="text-sm font-semibold text-foreground">Groups Requiring Review</h3>
-                <Link
-                  href="/bias"
-                  className="text-[11px] text-[#028090] hover:underline flex items-center gap-1"
-                >
+                <Link href="/bias" className="text-[11px] text-[#028090] hover:underline flex items-center gap-1">
                   Bias &amp; Fairness <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
@@ -171,21 +190,14 @@ export default function OverviewPage() {
               ) : (
                 <div className="space-y-2">
                   {openReviews.map((r) => (
-                    <div
-                      key={`${r.attribute}-${r.group}`}
-                      className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/30"
-                    >
+                    <div key={`${r.attribute}-${r.group}`} className="flex items-center justify-between gap-3 p-2.5 rounded-lg bg-muted/30">
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{groupLabel(r.group)}</p>
                         <p className="text-xs text-muted-foreground">{attrLabel(r.attribute)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono text-sm font-semibold text-[#ae3c24]">
-                          {r.ratio.toFixed(3)}
-                        </span>
-                        <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusColor("Review Required")}`}
-                        >
+                        <span className="font-mono text-sm font-semibold text-[#ae3c24]">{r.ratio.toFixed(3)}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusColor("Review Required")}`}>
                           Review Required
                         </span>
                       </div>
@@ -195,14 +207,10 @@ export default function OverviewPage() {
               )}
             </div>
 
-            {/* Regulatory posture */}
             <div className="bg-white rounded-xl border border-border p-5">
               <div className="flex items-center justify-between gap-3 mb-1">
                 <h3 className="text-sm font-semibold text-foreground">Regulatory Posture</h3>
-                <Link
-                  href="/compliance"
-                  className="text-[11px] text-[#028090] hover:underline flex items-center gap-1"
-                >
+                <Link href="/compliance" className="text-[11px] text-[#028090] hover:underline flex items-center gap-1">
                   Compliance <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
@@ -210,9 +218,7 @@ export default function OverviewPage() {
                 Resolved for {reqPayload?.footprint?.us_states.join(", ") || "the configured footprint"}.
               </p>
               {!req ? (
-                <p className="text-sm text-muted-foreground py-6 text-center">
-                  Requirements unavailable.
-                </p>
+                <p className="text-sm text-muted-foreground py-6 text-center">Requirements unavailable.</p>
               ) : (
                 <>
                   <div className="grid grid-cols-3 gap-3 mb-4">
@@ -246,18 +252,111 @@ export default function OverviewPage() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Link
-              href="/audit-report"
-              className="flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1e2761] text-white text-sm font-medium hover:opacity-90"
-            >
+            <Link href="/audit-report" className="flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1e2761] text-white text-sm font-medium hover:opacity-90">
               <ShieldCheck className="w-4 h-4" /> View Certified Audit Report
             </Link>
-            <Link
-              href="/hiring"
-              className="flex items-center gap-2 h-10 px-4 rounded-lg border border-border text-sm font-medium hover:bg-muted"
-            >
+            <Link href="/hiring" className="flex items-center gap-2 h-10 px-4 rounded-lg border border-border text-sm font-medium hover:bg-muted">
               <Layers className="w-4 h-4" /> Hiring Impact Ratios
             </Link>
+          </div>
+        </>
+      )}
+
+      {/* ── Seeded programme view (no engine source) ───────────────────── */}
+      {showDemo && (
+        <>
+          <div className="pt-2">
+            <h2 className="text-sm font-semibold text-foreground mb-3">Programme Snapshot</h2>
+            <DemoDataBanner detail="Model inventory, case and completion figures below are seeded for demonstration. They are not produced by the governance engine and are not audit findings." />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {[
+              { label: "AI Models", value: models!.length, sub: `${models!.filter((m) => m.status === "Production").length} in production` },
+              { label: "Open Cases", value: incidents!.filter((i) => i.status !== "Closed" && i.status !== "Resolved").length, sub: `${incidents!.length} total` },
+              { label: "Regulations Tracked", value: regulations!.length, sub: `${regulations!.filter((r) => r.status === "Compliant").length} compliant` },
+              { label: "Employees Monitored", value: formatNumber(performance!.reduce((s, d) => s + d.employeeCount, 0)), sub: "AI-assisted reviews" },
+            ].map((c) => (
+              <div key={c.label} className="bg-white rounded-xl border border-border p-5">
+                <p className="text-xs text-muted-foreground">{c.label}</p>
+                <p className="text-2xl font-bold mt-1">{c.value}</p>
+                <p className="text-[11px] text-muted-foreground mt-1">{c.sub}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-white rounded-xl border border-border p-5">
+              <h3 className="text-sm font-semibold text-foreground">Review Activity by HR Function</h3>
+              <p className="text-xs text-muted-foreground mb-4">
+                Activity density, shaded by volume — not a danger rating.
+              </p>
+              <div className="space-y-2.5">
+                {activityByFunction.map((a) => (
+                  <div key={a.domain} className="flex items-center gap-3">
+                    <span className="w-32 shrink-0 text-right text-xs text-muted-foreground truncate">{a.domain}</span>
+                    <div className="flex-1 h-5 bg-muted rounded-md overflow-hidden">
+                      <div
+                        className="h-full rounded-md"
+                        style={{
+                          width: `${(a.count / maxActivity) * 100}%`,
+                          backgroundColor: "#1e2761",
+                          opacity: 0.4 + 0.6 * (a.count / maxActivity),
+                        }}
+                      />
+                    </div>
+                    <span className="w-4 shrink-0 text-sm font-semibold text-right">{a.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl border border-border p-5">
+              <h3 className="text-sm font-semibold text-foreground">Review Priority Tiers</h3>
+              <p className="text-xs text-muted-foreground mb-4">Prioritization for review scheduling.</p>
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={55}
+                    outerRadius={85}
+                    paddingAngle={4}
+                    dataKey="value"
+                    isAnimationActive={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                  >
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl border border-border p-5">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Recent Cases</h3>
+            <div className="space-y-3">
+              {incidents!.slice(0, 5).map((inc) => (
+                <div key={inc.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/30">
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium shrink-0 ${getPriorityColor(inc.severity)}`}>
+                    {getPriorityLabel(inc.severity)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-foreground truncate">{inc.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {vocab(inc.category)} · {new Date(inc.reportedDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusColor(inc.status)}`}>
+                    {inc.status}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}
