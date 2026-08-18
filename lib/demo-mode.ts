@@ -1,14 +1,17 @@
 /**
- * Controls whether seeded demonstration content is rendered at all.
+ * Controls whether seeded demonstration content is rendered.
  *
- * Default is OFF: screens and sections with no live governance-engine source
- * are hidden rather than shown with seeded numbers. A compliance product must
- * not display figures a viewer could mistake for audit findings.
+ * Default is ON: the seeded screens are shown alongside the engine-backed ones
+ * so the full dashboard is walkable. They always carry an explicit demo-data
+ * banner — visible-but-labelled, never passed off as an audit finding.
  *
- * Set NEXT_PUBLIC_SHOW_DEMO_DATA="true" to bring the seeded screens back for a
- * walkthrough; they then render with an explicit demo-data banner.
+ * Set NEXT_PUBLIC_SHOW_DEMO_DATA="false" to hide them entirely (removed from
+ * the nav and blocked by middleware), leaving only live governance results.
+ *
+ * NOTE: NEXT_PUBLIC_* values are inlined at build time, so changing this needs
+ * a rebuild — a restart alone will not pick it up.
  */
-export const SHOW_DEMO_DATA = process.env.NEXT_PUBLIC_SHOW_DEMO_DATA === "true";
+export const SHOW_DEMO_DATA = process.env.NEXT_PUBLIC_SHOW_DEMO_DATA !== "false";
 
 /** Screens whose data has no governance-engine source. */
 export const DEMO_ONLY_ROUTES = [
