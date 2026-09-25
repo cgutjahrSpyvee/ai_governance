@@ -104,15 +104,15 @@ export default function PerformancePage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="pb-2 font-medium">Department</th>
-                <th className="pb-2 font-medium">Employees</th>
-                <th className="pb-2 font-medium">AI Avg</th>
-                <th className="pb-2 font-medium">Manager Avg</th>
-                <th className="pb-2 font-medium">Override Rate</th>
-                <th className="pb-2 font-medium">Male Avg</th>
-                <th className="pb-2 font-medium">Female Avg</th>
-                <th className="pb-2 font-medium">Calibrated</th>
+              <tr className="border-b border-border text-left text-foreground">
+                <th className="pb-2 font-semibold">Department</th>
+                <th className="pb-2 font-semibold">Employees</th>
+                <th className="pb-2 font-semibold">AI Avg</th>
+                <th className="pb-2 font-semibold">Manager Avg</th>
+                <th className="pb-2 font-semibold">Override Rate</th>
+                <th className="pb-2 font-semibold">Male Avg</th>
+                <th className="pb-2 font-semibold">Female Avg</th>
+                <th className="pb-2 font-semibold">Calibrated</th>
               </tr>
             </thead>
             <tbody>

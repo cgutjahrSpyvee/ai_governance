@@ -3,7 +3,7 @@
 import { useIncidents } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
 import DemoDataBanner from "@/components/layout/demo-data-banner";
-import { getPriorityColor, getPriorityLabel, getStatusColor, formatDate, vocab } from "@/lib/utils";
+import { getPriorityColor, getPriorityLabel, getStatusColor, formatDate, vocab, metricFrame } from "@/lib/utils";
 import { ClipboardList, Clock, MessageSquare, CheckCircle2 } from "lucide-react";
 
 export default function IncidentsPage() {
@@ -12,6 +12,10 @@ export default function IncidentsPage() {
   if (isLoading) return <PageLoading />;
   if (error) return <PageError message={error.message} />;
   if (!incidents) return <PageError />;
+
+  const openCases = incidents.filter(
+    (i) => i.status === "Open" || i.status === "Investigating",
+  ).length;
 
   const resolved = incidents.filter((i) => i.resolvedDate);
   const avgDays =
@@ -45,14 +49,12 @@ export default function IncidentsPage() {
           </div>
           <p className="text-xl font-bold">{incidents.length}</p>
         </div>
-        <div className="bg-white rounded-xl border border-border p-4">
+        <div className={`rounded-xl p-4 ${metricFrame(openCases > 0 ? "alarm" : "neutral")}`}>
           <div className="flex items-center gap-2">
             <ClipboardList className="w-4 h-4 text-[#ae3c24]" />
             <p className="text-xs text-muted-foreground">Open / Investigating</p>
           </div>
-          <p className="text-xl font-bold text-[#ae3c24] mt-1">
-            {incidents.filter((i) => i.status === "Open" || i.status === "Investigating").length}
-          </p>
+          <p className="text-xl font-bold text-[#ae3c24] mt-1">{openCases}</p>
         </div>
         <div className="bg-white rounded-xl border border-border p-4">
           <div className="flex items-center gap-2">
@@ -77,7 +79,7 @@ export default function IncidentsPage() {
               <tr className="bg-muted/50 text-left text-muted-foreground">
                 <th className="px-4 py-3 font-medium">ID</th>
                 <th className="px-4 py-3 font-medium">Title</th>
-                <th className="px-4 py-3 font-medium">Severity</th>
+                <th className="px-4 py-3 font-medium">Review Priority</th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium">Category</th>
                 <th className="px-4 py-3 font-medium">Reported</th>
@@ -96,7 +98,7 @@ export default function IncidentsPage() {
                     <span className={`text-xs px-2 py-0.5 rounded border ${getPriorityColor(inc.severity)}`}>{getPriorityLabel(inc.severity)}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded border ${getStatusColor(inc.status)}`}>{inc.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded border ${getStatusColor(inc.status)}`}>{vocab(inc.status)}</span>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{vocab(inc.category)}</td>
                   <td className="px-4 py-3 text-xs text-muted-foreground">{formatDate(new Date(inc.reportedDate).toISOString())}</td>

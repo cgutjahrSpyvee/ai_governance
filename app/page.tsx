@@ -8,8 +8,9 @@ import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { PageLoading } from "@/components/ui/loading";
 import { SHOW_DEMO_DATA } from "@/lib/demo-mode";
 import {
-  formatNumber, getStatusColor, getPriorityColor, getPriorityLabel, vocab, PRIORITY_CHART,
+  formatNumber, getStatusColor, getPriorityColor, getPriorityLabel, vocab, PRIORITY_CHART, metricFrame,
 } from "@/lib/utils";
+import type { MetricTone } from "@/lib/utils";
 import { isProvisional } from "@/lib/engine/client";
 import { useModels, useRegulations, useIncidents, usePerformance } from "@/lib/api-client";
 import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
@@ -85,6 +86,9 @@ export default function OverviewPage() {
 
   // ── Seeded aggregates ───────────────────────────────────────────────
   const showDemo = SHOW_DEMO_DATA && models && regulations && incidents && performance;
+  const openCases = incidents
+    ? incidents.filter((i) => i.status !== "Closed" && i.status !== "Resolved").length
+    : 0;
   const activityByFunction = models
     ? Array.from(new Set(models.map((m) => m.function)))
         .map((fn) => ({ domain: fn, count: models.filter((m) => m.function === fn).length }))
@@ -140,7 +144,7 @@ export default function OverviewPage() {
               </p>
               <p className="text-[11px] text-muted-foreground mt-1">Run {report.run_id}</p>
             </div>
-            <div className="bg-white rounded-xl border border-border p-5">
+            <div className={`rounded-xl p-5 ${metricFrame("alarm")}`}>
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Flag className="w-4 h-4 text-[#ae3c24]" />
                 <span className="text-xs">Findings</span>
@@ -150,7 +154,7 @@ export default function OverviewPage() {
                 {report.count_critical} critical · {report.count_observation} observations
               </p>
             </div>
-            <div className="bg-white rounded-xl border border-border p-5">
+            <div className={`rounded-xl p-5 ${metricFrame("alarm")}`}>
               <div className="flex items-center gap-2 text-muted-foreground mb-1">
                 <Scale className="w-4 h-4 text-[#ae3c24]" />
                 <span className="text-xs">Open Reviews</span>
@@ -196,7 +200,7 @@ export default function OverviewPage() {
                         <p className="text-xs text-muted-foreground">{attrLabel(r.attribute)}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="font-mono text-sm font-semibold text-[#ae3c24]">{r.ratio.toFixed(3)}</span>
+                        <span className="font-mono text-sm font-bold text-[#ae3c24]">{r.ratio.toFixed(3)}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded border ${getStatusColor("Review Required")}`}>
                           Review Required
                         </span>
@@ -272,14 +276,14 @@ export default function OverviewPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { label: "AI Models", value: models!.length, sub: `${models!.filter((m) => m.status === "Production").length} in production` },
-              { label: "Open Cases", value: incidents!.filter((i) => i.status !== "Closed" && i.status !== "Resolved").length, sub: `${incidents!.length} total` },
-              { label: "Regulations Tracked", value: regulations!.length, sub: `${regulations!.filter((r) => r.status === "Compliant").length} compliant` },
-              { label: "Employees Monitored", value: formatNumber(performance!.reduce((s, d) => s + d.employeeCount, 0)), sub: "AI-assisted reviews" },
+              { label: "AI Models", value: models!.length, sub: `${models!.filter((m) => m.status === "Production").length} in production`, tone: "neutral" as const, cls: "" },
+              { label: "Open Cases", value: openCases, sub: `${incidents!.length} total`, tone: (openCases > 0 ? "alarm" : "neutral") as MetricTone, cls: openCases > 0 ? "text-[#ae3c24]" : "" },
+              { label: "Regulations Tracked", value: regulations!.length, sub: `${regulations!.filter((r) => r.status === "Compliant").length} compliant`, tone: "neutral" as const, cls: "" },
+              { label: "Employees Monitored", value: formatNumber(performance!.reduce((s, d) => s + d.employeeCount, 0)), sub: "AI-assisted reviews", tone: "neutral" as const, cls: "" },
             ].map((c) => (
-              <div key={c.label} className="bg-white rounded-xl border border-border p-5">
+              <div key={c.label} className={`rounded-xl p-5 ${metricFrame(c.tone)}`}>
                 <p className="text-xs text-muted-foreground">{c.label}</p>
-                <p className="text-2xl font-bold mt-1">{c.value}</p>
+                <p className={`text-2xl font-bold mt-1 ${c.cls}`}>{c.value}</p>
                 <p className="text-[11px] text-muted-foreground mt-1">{c.sub}</p>
               </div>
             ))}

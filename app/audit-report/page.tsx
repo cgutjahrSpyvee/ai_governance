@@ -214,7 +214,7 @@ export default function AuditReportPage() {
                               <td className="py-2">{pct(stat.selection_rate)}</td>
                               <td
                                 className={`py-2 font-mono ${
-                                  !within ? "text-[#ae3c24] font-semibold" : ""
+                                  !within ? "text-[#ae3c24] font-bold" : ""
                                 }`}
                               >
                                 {ratio === undefined ? "—" : ratio.toFixed(3)}

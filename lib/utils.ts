@@ -52,11 +52,36 @@ export const ETHNICITY_COLORS = ["#1e2761", "#02c39a", "#5b7db1", "#028090", "#9
 
 /* Reusable chip class strings — muted earth-tone palette from the reference
  * mockup (kept as static literals so Tailwind's scanner can see them). */
-const CHIP_TERRACOTTA = "text-[#ae3c24] bg-[#f9e4de] border-[#efc5b8]"; // Priority 1 / Review Required / Open
-const CHIP_GOLD = "text-[#8a620a] bg-[#fbeecd] border-[#eed18a]";       // Priority 2 / in-progress
-const CHIP_SAGE = "text-[#0a7a49] bg-[#d7f2e4] border-[#a9e1c6]";       // within target / compliant
-const CHIP_SLATE = "text-slate-600 bg-slate-100 border-slate-200";     // standard / neutral
-const CHIP_FAINT = "text-slate-500 bg-slate-50 border-slate-200";
+export const CHIP_TERRACOTTA = "text-[#ae3c24] bg-[#f9e4de] border-[#efc5b8]"; // Priority 1 / Review Required / Open
+export const CHIP_GOLD = "text-[#8a620a] bg-[#fbeecd] border-[#eed18a]";       // Priority 2 / in-progress
+export const CHIP_SAGE = "text-[#0a7a49] bg-[#d7f2e4] border-[#a9e1c6]";       // within target / compliant
+export const CHIP_SLATE = "text-slate-600 bg-slate-100 border-slate-200";     // standard / neutral
+export const CHIP_FAINT = "text-slate-500 bg-slate-50 border-slate-200";
+
+/* ------------------------------------------------------------------ *
+ * Summary-box framing.
+ *
+ * Alarm state used to be carried by the value colour alone, which reads
+ * as just another number at a glance. These give the box itself a
+ * heavier frame so a finding is visible before the figure is read.
+ *
+ * Returned as whole static literals — Tailwind's scanner cannot resolve
+ * interpolated arbitrary values, same reason as the chips above.
+ * ------------------------------------------------------------------ */
+export type MetricTone = "alarm" | "warning" | "good" | "neutral";
+
+export function metricFrame(tone: MetricTone = "neutral"): string {
+  switch (tone) {
+    case "alarm":
+      return "border-2 border-[#efc5b8] bg-[#fdf7f5]";
+    case "warning":
+      return "border-2 border-[#eed18a] bg-[#fdfaf2]";
+    case "good":
+    case "neutral":
+    default:
+      return "border border-border bg-white";
+  }
+}
 
 /* ------------------------------------------------------------------ *
  * Section 4 — Global Vocabulary Standard.
@@ -96,6 +121,9 @@ export function getPriorityLabel(level: string): string {
       return "Priority 2";
     case "low":
       return "Standard Review Queue";
+    // Audit-log severities — Section 4 maps Warnings to Pending Calibrations.
+    case "warning":
+      return "Pending Calibration";
     default:
       return level;
   }
@@ -114,6 +142,11 @@ export function getPriorityColor(level: string): string {
     case "low":
     case "standard review queue":
       return CHIP_SAGE;
+    case "warning":
+    case "pending calibration":
+      return CHIP_GOLD;
+    case "info":
+      return CHIP_FAINT;
     default:
       return CHIP_SLATE;
   }

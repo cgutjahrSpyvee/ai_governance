@@ -3,19 +3,15 @@
 import { useAuditLogs } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
 import DemoDataBanner from "@/components/layout/demo-data-banner";
-import { auditContext } from "@/lib/utils";
+import {
+  auditContext,
+  getPriorityLabel,
+  getPriorityColor,
+  metricFrame,
+  CHIP_SLATE,
+} from "@/lib/utils";
+import type { MetricTone } from "@/lib/utils";
 import { FileText, Flag, Clock, Users } from "lucide-react";
-
-// Severity values map to neutral display labels (chips only, never the record).
-const severityLabel = (s: string) =>
-  s === "Critical" ? "Priority 1" : s === "Warning" ? "Pending Calibration" : "Info";
-
-const severityChip = (s: string) =>
-  s === "Critical"
-    ? "text-[#ae3c24] bg-[#f9e4de] border-[#efc5b8]"
-    : s === "Warning"
-    ? "text-[#8a620a] bg-[#fbeecd] border-[#eed18a]"
-    : "text-slate-500 bg-slate-50 border-slate-200";
 
 export default function AuditPage() {
   const { data: logs, isLoading, error } = useAuditLogs();
@@ -23,6 +19,40 @@ export default function AuditPage() {
   if (isLoading) return <PageLoading />;
   if (error) return <PageError message={error.message} />;
   if (!logs) return <PageError />;
+
+  const priorityOne = logs.filter((l) => l.severity === "Critical").length;
+  const pendingCalibrations = logs.filter((l) => l.severity === "Warning").length;
+
+  const cards: {
+    label: string;
+    value: string | number;
+    icon: typeof FileText;
+    tone: MetricTone;
+    cls: string;
+  }[] = [
+    { label: "Total Events", value: logs.length, icon: FileText, tone: "neutral", cls: "" },
+    {
+      label: "Priority 1",
+      value: priorityOne,
+      icon: Flag,
+      tone: priorityOne > 0 ? "alarm" : "neutral",
+      cls: "text-[#ae3c24]",
+    },
+    {
+      label: "Pending Calibrations",
+      value: pendingCalibrations,
+      icon: Clock,
+      tone: pendingCalibrations > 0 ? "warning" : "neutral",
+      cls: "text-[#8a620a]",
+    },
+    {
+      label: "People Affected",
+      value: logs.reduce((s, l) => s + l.affectedCount, 0).toLocaleString(),
+      icon: Users,
+      tone: "neutral",
+      cls: "",
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -36,68 +66,58 @@ export default function AuditPage() {
       <DemoDataBanner />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <FileText className="w-4 h-4" />
-            <p className="text-xs">Total Events</p>
+        {cards.map((c) => (
+          <div key={c.label} className={`rounded-xl p-4 ${metricFrame(c.tone)}`}>
+            <div className="flex items-center gap-2 text-muted-foreground mb-1">
+              <c.icon className={`w-4 h-4 ${c.cls}`} />
+              <p className="text-xs">{c.label}</p>
+            </div>
+            <p className={`text-xl font-bold ${c.cls}`}>{c.value}</p>
           </div>
-          <p className="text-xl font-bold">{logs.length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <Flag className="w-4 h-4 text-[#ae3c24]" />
-            <p className="text-xs">Priority 1</p>
-          </div>
-          <p className="text-xl font-bold text-[#ae3c24]">{logs.filter((l) => l.severity === "Critical").length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <Clock className="w-4 h-4 text-[#8a620a]" />
-            <p className="text-xs">Pending Calibrations</p>
-          </div>
-          <p className="text-xl font-bold text-[#8a620a]">{logs.filter((l) => l.severity === "Warning").length}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-border p-4">
-          <div className="flex items-center gap-2 text-muted-foreground mb-1">
-            <Users className="w-4 h-4" />
-            <p className="text-xs">People Affected</p>
-          </div>
-          <p className="text-xl font-bold">{logs.reduce((s, l) => s + l.affectedCount, 0).toLocaleString()}</p>
-        </div>
+        ))}
       </div>
 
       <div className="bg-white rounded-xl border border-border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          {/* Body cells are uniformly text-xs; headers match that size so the
+              column labels no longer outweigh the records they describe. */}
+          <table className="w-full text-xs">
             <thead>
-              <tr className="bg-muted/50 text-left text-muted-foreground">
-                <th className="px-4 py-3 font-medium">Timestamp</th>
-                <th className="px-4 py-3 font-medium">Event (Verbatim)</th>
-                <th className="px-4 py-3 font-medium">Context</th>
-                <th className="px-4 py-3 font-medium">Category</th>
-                <th className="px-4 py-3 font-medium">Severity</th>
-                <th className="px-4 py-3 font-medium">Affected</th>
+              <tr className="bg-muted/50 text-left text-foreground">
+                <th className="px-4 py-3 font-semibold">Timestamp</th>
+                <th className="px-4 py-3 font-semibold">Event (Verbatim)</th>
+                <th className="px-4 py-3 font-semibold">Context</th>
+                <th className="px-4 py-3 font-semibold">Category</th>
+                <th className="px-4 py-3 font-semibold">Review Priority</th>
+                <th className="px-4 py-3 font-semibold">Affected</th>
               </tr>
             </thead>
             <tbody>
               {logs.map((log) => (
                 <tr key={log.id} className="border-t border-border/50 hover:bg-muted/20">
-                  <td className="px-4 py-3 text-xs text-muted-foreground whitespace-nowrap">
+                  <td className="px-4 py-3 text-foreground whitespace-nowrap">
                     {new Date(log.timestamp).toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </td>
                   {/* Verbatim source event — immutable, never paraphrased */}
-                  <td className="px-4 py-3 font-mono text-xs text-foreground">{log.event}</td>
-                  {/* Plain-language context — presentation layer only, visually secondary */}
-                  <td className="px-4 py-3 text-xs text-muted-foreground font-normal italic max-w-xs">{auditContext(log.event, log.category)}</td>
-                  <td className="px-4 py-3">
-                    <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">{log.category}</span>
+                  <td className="px-4 py-3 font-mono text-foreground">{log.event}</td>
+                  {/* Plain-language context — presentation layer only. Section 3
+                      requires it read as secondary to the verbatim event, so this
+                      is the one column that stays muted while the rest is black;
+                      the italic carries the distinction as much as the colour. */}
+                  <td className="px-4 py-3 text-muted-foreground italic max-w-xs">
+                    {auditContext(log.event, log.category)}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded border ${severityChip(log.severity)}`}>
-                      {severityLabel(log.severity)}
+                    <span className={`px-2 py-0.5 rounded border ${CHIP_SLATE}`}>{log.category}</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`px-2 py-0.5 rounded border ${getPriorityColor(log.severity)}`}>
+                      {getPriorityLabel(log.severity)}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{log.affectedCount > 0 ? log.affectedCount.toLocaleString() : "—"}</td>
+                  <td className="px-4 py-3 text-foreground">
+                    {log.affectedCount > 0 ? log.affectedCount.toLocaleString() : "—"}
+                  </td>
                 </tr>
               ))}
             </tbody>

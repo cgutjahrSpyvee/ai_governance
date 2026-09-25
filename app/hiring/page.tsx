@@ -5,7 +5,7 @@ import { useHiringFunnel } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
 import DemoDataBanner from "@/components/layout/demo-data-banner";
 import { SHOW_DEMO_DATA } from "@/lib/demo-mode";
-import { formatNumber, getStatusColor, GENDER_COLORS, ETHNICITY_COLORS } from "@/lib/utils";
+import { formatNumber, getStatusColor, GENDER_COLORS, ETHNICITY_COLORS, metricFrame } from "@/lib/utils";
 import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
 import type { GroupStat, GroupSummary } from "@/lib/engine/client";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
@@ -130,12 +130,12 @@ export default function HiringPage() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
               {[
-                { label: "Records Analyzed", value: report.total_records.toLocaleString(), icon: UserSearch, cls: "" },
-                { label: "Overall Selection Rate", value: pct(report.overall_selection_rate), icon: TrendingUp, cls: "" },
-                { label: "Groups Within Target", value: withinTarget, icon: ShieldCheck, cls: "text-[#0a7a49]" },
-                { label: "Open Reviews", value: openReviews, icon: MessageSquare, cls: "text-[#ae3c24]" },
+                { label: "Records Analyzed", value: report.total_records.toLocaleString(), icon: UserSearch, cls: "", alarm: false },
+                { label: "Overall Selection Rate", value: pct(report.overall_selection_rate), icon: TrendingUp, cls: "", alarm: false },
+                { label: "Groups Within Target", value: withinTarget, icon: ShieldCheck, cls: "text-[#0a7a49]", alarm: false },
+                { label: "Open Reviews", value: openReviews, icon: MessageSquare, cls: "text-[#ae3c24]", alarm: openReviews > 0 },
               ].map((c) => (
-                <div key={c.label} className="rounded-lg border border-border/60 p-3">
+                <div key={c.label} className={`rounded-lg p-3 ${c.alarm ? metricFrame("alarm") : "border border-border/60"}`}>
                   <div className="flex items-center gap-2 text-muted-foreground mb-1">
                     <c.icon className={`w-4 h-4 ${c.cls}`} />
                     <span className="text-xs">{c.label}</span>
@@ -175,7 +175,7 @@ export default function HiringPage() {
                         </td>
                         <td className="py-2.5 text-muted-foreground">{x.count.toLocaleString()}</td>
                         <td className="py-2.5 font-mono">{pct(x.selectionRate)}</td>
-                        <td className={`py-2.5 font-mono ${!within ? "text-[#ae3c24] font-semibold" : ""}`}>
+                        <td className={`py-2.5 font-mono ${!within ? "text-[#ae3c24] font-bold" : ""}`}>
                           {x.impactRatio === undefined ? "—" : x.impactRatio.toFixed(3)}
                         </td>
                         <td className="py-2.5">

@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, LabelList, Cell,
 } from "recharts";
 import { CheckCircle2, Flag, BarChart3, Layers, Radio, AlertCircle } from "lucide-react";
-import { getStatusColor } from "@/lib/utils";
+import { getStatusColor, metricFrame } from "@/lib/utils";
 import type { AuditReportPayload } from "@/app/api/engine/audit-report/route";
 import type { GroupStat, GroupSummary } from "@/lib/engine/client";
 
@@ -135,7 +135,7 @@ export default function BiasPage() {
             <p className="text-xl font-bold text-[#0a7a49]">{withinTarget}</p>
           </div>
         </div>
-        <div className="bg-white rounded-xl border border-border p-4 flex items-center gap-3">
+        <div className={`rounded-xl p-4 flex items-center gap-3 ${metricFrame(needsReview > 0 ? "alarm" : "neutral")}`}>
           <Flag className="w-5 h-5 text-[#ae3c24]" />
           <div>
             <p className="text-xs text-muted-foreground">Open Reviews</p>
@@ -166,11 +166,32 @@ export default function BiasPage() {
               {chartData.map((d, i) => (
                 <Cell key={i} fill={d.ratio < threshold ? "#ae3c24" : "#1e2761"} />
               ))}
+              {/* The bar fill already reacts to the threshold; the number beside
+                  it used to stay slate regardless, so a breach read as ordinary
+                  at a glance. Custom content lets the label track its own bar. */}
               <LabelList
                 dataKey="ratio"
                 position="right"
-                formatter={(v: any) => Number(v).toFixed(3)}
-                style={{ fontSize: 11, fontWeight: 600, fill: "#334155" }}
+                content={(props: any) => {
+                  const { x, y, width, height, value } = props;
+                  if (value === undefined || value === null) return null;
+                  const below = Number(value) < threshold;
+                  return (
+                    <text
+                      x={Number(x) + Number(width) + 6}
+                      y={Number(y) + Number(height) / 2}
+                      textAnchor="start"
+                      dominantBaseline="central"
+                      style={{
+                        fontSize: 11,
+                        fontWeight: below ? 700 : 600,
+                        fill: below ? "#ae3c24" : "#334155",
+                      }}
+                    >
+                      {Number(value).toFixed(3)}
+                    </text>
+                  );
+                }}
               />
             </Bar>
           </BarChart>
@@ -182,14 +203,14 @@ export default function BiasPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="pb-2 font-medium">Protected Attribute</th>
-                <th className="pb-2 font-medium">Group</th>
-                <th className="pb-2 font-medium">Count</th>
-                <th className="pb-2 font-medium">Selection Rate</th>
-                <th className="pb-2 font-medium">Impact Ratio</th>
-                <th className="pb-2 font-medium">Target</th>
-                <th className="pb-2 font-medium">Status</th>
+              <tr className="border-b border-border text-left text-foreground">
+                <th className="pb-2 font-semibold">Protected Attribute</th>
+                <th className="pb-2 font-semibold">Group</th>
+                <th className="pb-2 font-semibold">Count</th>
+                <th className="pb-2 font-semibold">Selection Rate</th>
+                <th className="pb-2 font-semibold">Impact Ratio</th>
+                <th className="pb-2 font-semibold">Target</th>
+                <th className="pb-2 font-semibold">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -207,7 +228,7 @@ export default function BiasPage() {
                     </td>
                     <td className="py-2.5 text-muted-foreground">{x.count.toLocaleString()}</td>
                     <td className="py-2.5 font-mono">{pct(x.selectionRate)}</td>
-                    <td className={`py-2.5 font-mono ${!within ? "text-[#ae3c24] font-semibold" : ""}`}>
+                    <td className={`py-2.5 font-mono ${!within ? "text-[#ae3c24] font-bold" : ""}`}>
                       {x.impactRatio === undefined ? "—" : x.impactRatio.toFixed(3)}
                     </td>
                     <td className="py-2.5 font-mono text-muted-foreground">{threshold.toFixed(2)}</td>

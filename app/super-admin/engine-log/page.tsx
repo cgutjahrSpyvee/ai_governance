@@ -1,6 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import { metricFrame } from "@/lib/utils";
+import type { MetricTone } from "@/lib/utils";
 import { Activity, RefreshCw, ServerCog } from "lucide-react";
 import type { EngineLogPayload } from "@/app/api/admin/engine-log/route";
 
@@ -58,16 +60,22 @@ export default function EngineLogPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Calls Recorded", value: calls.length, cls: "" },
-          { label: "Failures", value: failures, cls: failures > 0 ? "text-[#ae3c24]" : "" },
-          { label: "Avg Duration", value: `${avgMs}ms`, cls: "" },
+          { label: "Calls Recorded", value: calls.length, cls: "", tone: "neutral" as MetricTone },
+          {
+            label: "Failures",
+            value: failures,
+            cls: failures > 0 ? "text-[#ae3c24]" : "",
+            tone: (failures > 0 ? "alarm" : "neutral") as MetricTone,
+          },
+          { label: "Avg Duration", value: `${avgMs}ms`, cls: "", tone: "neutral" as MetricTone },
           {
             label: "Engine",
             value: data?.configured ? "Configured" : "Not configured",
             cls: data?.configured ? "text-[#0a7a49]" : "text-[#ae3c24]",
+            tone: (data?.configured ? "neutral" : "alarm") as MetricTone,
           },
         ].map((c) => (
-          <div key={c.label} className="bg-white rounded-xl border border-border p-4">
+          <div key={c.label} className={`rounded-xl p-4 ${metricFrame(c.tone)}`}>
             <p className="text-xs text-muted-foreground">{c.label}</p>
             <p className={`text-xl font-bold mt-1 ${c.cls}`}>{c.value}</p>
           </div>

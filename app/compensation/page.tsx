@@ -3,11 +3,17 @@
 import { usePayEquity } from "@/lib/api-client";
 import { PageLoading, PageError } from "@/components/ui/loading";
 import DemoDataBanner from "@/components/layout/demo-data-banner";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, metricFrame } from "@/lib/utils";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceArea, ReferenceLine, LabelList,
 } from "recharts";
 import { DollarSign, TrendingDown, Activity, CheckCircle2 } from "lucide-react";
+
+/* Gap values are whole percentage points (e.g. 5.7 means 5.7%), not fractions.
+ * Matches the threshold behind the "Roles Prioritized for Pay Analysis" count
+ * so the table and that card can never disagree. Note the chart corridor below
+ * is a separate, tighter target of 3%. */
+const PAY_GAP_THRESHOLD = 5;
 
 export default function CompensationPage() {
   const { data: payEquity, isLoading, error } = usePayEquity();
@@ -18,7 +24,7 @@ export default function CompensationPage() {
 
   const avgGender = +(payEquity.reduce((s, d) => s + d.gapPercent, 0) / payEquity.length).toFixed(1);
   const avgEthnic = +(payEquity.reduce((s, d) => s + d.ethnicGapPercent, 0) / payEquity.length).toFixed(1);
-  const highGap = payEquity.filter((d) => d.gapPercent > 5).length;
+  const highGap = payEquity.filter((d) => d.gapPercent > PAY_GAP_THRESHOLD).length;
 
   return (
     <div className="space-y-6">
@@ -46,7 +52,7 @@ export default function CompensationPage() {
           </div>
           <p className="text-xl font-bold text-foreground">{avgEthnic}%</p>
         </div>
-        <div className="bg-white rounded-xl border border-border p-4">
+        <div className={`rounded-xl p-4 ${metricFrame(highGap > 0 ? "warning" : "neutral")}`}>
           <div className="flex items-center gap-2 text-muted-foreground mb-1">
             <Activity className="w-4 h-4 text-[#8a620a]" />
             <span className="text-xs">Roles Prioritized for Pay Analysis</span>
@@ -85,15 +91,15 @@ export default function CompensationPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-muted-foreground">
-                <th className="pb-2 font-medium">Role</th>
-                <th className="pb-2 font-medium">Level</th>
-                <th className="pb-2 font-medium">Male Median</th>
-                <th className="pb-2 font-medium">Female Median</th>
-                <th className="pb-2 font-medium">Gender Gap</th>
-                <th className="pb-2 font-medium">White Median</th>
-                <th className="pb-2 font-medium">BIPOC Median</th>
-                <th className="pb-2 font-medium">Ethnic Gap</th>
+              <tr className="border-b border-border text-left text-foreground">
+                <th className="pb-2 font-semibold">Role</th>
+                <th className="pb-2 font-semibold">Level</th>
+                <th className="pb-2 font-semibold">Male Median</th>
+                <th className="pb-2 font-semibold">Female Median</th>
+                <th className="pb-2 font-semibold">Gender Gap</th>
+                <th className="pb-2 font-semibold">White Median</th>
+                <th className="pb-2 font-semibold">BIPOC Median</th>
+                <th className="pb-2 font-semibold">Ethnic Gap</th>
               </tr>
             </thead>
             <tbody>
@@ -103,12 +109,12 @@ export default function CompensationPage() {
                   <td className="py-2.5 text-muted-foreground">{d.level}</td>
                   <td className="py-2.5">${formatNumber(d.maleMedian)}</td>
                   <td className="py-2.5">${formatNumber(d.femaleMedian)}</td>
-                  <td className="py-2.5 font-semibold text-foreground">
+                  <td className={`py-2.5 ${d.gapPercent > PAY_GAP_THRESHOLD ? "font-bold text-[#ae3c24]" : "font-semibold text-foreground"}`}>
                     {d.gapPercent}%
                   </td>
                   <td className="py-2.5">${formatNumber(d.whiteMedian)}</td>
                   <td className="py-2.5">${formatNumber(d.bipocMedian)}</td>
-                  <td className="py-2.5 font-semibold text-foreground">
+                  <td className={`py-2.5 ${d.ethnicGapPercent > PAY_GAP_THRESHOLD ? "font-bold text-[#ae3c24]" : "font-semibold text-foreground"}`}>
                     {d.ethnicGapPercent}%
                   </td>
                 </tr>
